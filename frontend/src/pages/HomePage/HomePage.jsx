@@ -296,27 +296,27 @@ const HomePage = () => {
             <div className="footer-column">
               <h4>Product</h4>
               <ul>
-                <li><a href="#">Features</a></li>
-                <li><a href="#">Pricing</a></li>
-                <li><a href="#">Coverage</a></li>
+                <li><a href="/">Features</a></li>
+                <li><a href="/">Pricing</a></li>
+                <li><a href="/">Coverage</a></li>
               </ul>
             </div>
             
             <div className="footer-column">
               <h4>Company</h4>
               <ul>
-                <li><a href="#">About</a></li>
-                <li><a href="#">Support</a></li>
-                <li><a href="#">Contact</a></li>
+                <li><a href="/">About</a></li>
+                <li><a href="/">Support</a></li>
+                <li><a href="/">Contact</a></li>
               </ul>
             </div>
             
             <div className="footer-column">
               <h4>Legal</h4>
               <ul>
-                <li><a href="#">Privacy Policy</a></li>
-                <li><a href="#">Terms of Service</a></li>
-                <li><a href="#">Compliance</a></li>
+                <li><a href="/">Privacy Policy</a></li>
+                <li><a href="/">Terms of Service</a></li>
+                <li><a href="/">Compliance</a></li>
               </ul>
             </div>
           </div>

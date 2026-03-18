@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { Shield, Mail, Lock, Phone } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './Auth.css';
 
 const LoginPage = () => {
   const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
+  const navigate = useNavigate();
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    navigate('/dashboard');
+  };
 
   return (
     <div className="auth-container">
@@ -34,7 +40,7 @@ const LoginPage = () => {
           </button>
         </div>
 
-        <form className="auth-form">
+        <form className="auth-form" onSubmit={handleLogin}>
           {loginMethod === 'email' ? (
             <div className="form-group">
               <label>Email Address</label>
@@ -67,7 +73,7 @@ const LoginPage = () => {
               <span className="checkmark"></span>
               Remember me
             </label>
-            <a href="#" className="forgot-password">Forgot password?</a>
+            <a href="/" className="forgot-password">Forgot password?</a>
           </div>
 
           <button type="submit" className="auth-submit-btn">Login</button>

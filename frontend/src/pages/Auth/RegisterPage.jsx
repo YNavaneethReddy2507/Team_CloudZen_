@@ -84,7 +84,7 @@ const RegisterPage = () => {
             <label className="checkbox-label">
               <input type="checkbox" />
               <span className="checkmark"></span>
-              <span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></span>
+              <span>I agree to the <a href="/">Terms of Service</a> and <a href="/">Privacy Policy</a></span>
             </label>
           </div>
 
