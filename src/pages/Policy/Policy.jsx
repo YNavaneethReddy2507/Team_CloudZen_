@@ -1,13 +1,52 @@
 import React from 'react';
 import { 
-  Shield, LayoutDashboard, FileText, PieChart, AlertTriangle, 
-  CreditCard, Bell, User, LogOut, TrendingUp, CheckCircle2, Clock
+  Shield, FileText, PieChart, AlertTriangle, 
+  CheckCircle2, Clock,
+  X, Key, Lock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import './Policy.css';
+import { useUser } from '../../context/UserContext';
+
+import { PLANS } from '../../constants/plans';
 
 const Policy = () => {
+  const { user, updateUser } = useUser();
+  const [renewed, setRenewed] = React.useState(false);
+  const [showPasswordModal, setShowPasswordModal] = React.useState(false);
+  const [pendingPlan, setPendingPlan] = React.useState(null);
+  const [confirmPassword, setConfirmPassword] = React.useState('');
+  const [passwordError, setPasswordError] = React.useState('');
+
+  const currentPlanName = user.planName || 'Standard Shield';
+  const currentPlan = PLANS.find(p => p.name === currentPlanName) || PLANS[1];
+
+  const handleRenew = () => {
+    setRenewed(true);
+    // Auto-hide alert after 3 seconds
+    setTimeout(() => setRenewed(false), 3000);
+  };
+
+  const handleSelectPlan = (name) => {
+    setPendingPlan(name);
+    setShowPasswordModal(true);
+    setConfirmPassword('');
+    setPasswordError('');
+  };
+
+  const handleConfirmPlanChange = () => {
+    if (confirmPassword === user.password) {
+      updateUser({ planName: pendingPlan });
+      setShowPasswordModal(false);
+      setPendingPlan(null);
+      setConfirmPassword('');
+      setPasswordError('');
+    } else {
+      setPasswordError('Incorrect password. Please try again.');
+    }
+  };
+
   return (
     <div className="policy-layout dashboard-layout">
       <Sidebar activePage="policy" />
@@ -29,7 +68,7 @@ const Policy = () => {
             <span className="badge-active">Active</span>
           </div>
           
-          <h2 className="plan-name">Standard Shield</h2>
+          <h2 className="plan-name">{currentPlan.name}</h2>
           <p className="plan-subtitle">Your weekly protection plan</p>
 
           <div className="coverage-details-grid">
@@ -37,19 +76,19 @@ const Policy = () => {
               <div className="detail-label">
                 <span>₹</span> Weekly Premium
               </div>
-              <div className="detail-value">₹75</div>
+              <div className="detail-value">₹{currentPlan.premium}</div>
             </div>
             <div className="detail-item">
               <div className="detail-label">
                 <Shield size={16} /> Coverage Amount
               </div>
-              <div className="detail-value">₹3,000</div>
+              <div className="detail-value">₹{currentPlan.coverage.toLocaleString()}</div>
             </div>
             <div className="detail-item">
               <div className="detail-label">
                 <Clock size={16} /> Per Hour Payout
               </div>
-              <div className="detail-value">₹150</div>
+              <div className="detail-value">₹{currentPlan.payout}</div>
             </div>
             <div className="detail-item">
               <div className="detail-label">
@@ -59,9 +98,16 @@ const Policy = () => {
             </div>
           </div>
 
-          <div className="coverage-actions">
-            <button className="btn-renew">Renew Policy</button>
-            <button className="btn-details">View Premium Details</button>
+          <div className="coverage-actions" style={{ position: 'relative' }}>
+            {renewed && (
+              <div className="renewal-success-toast">
+                <CheckCircle2 size={16} /> Policy Renewed Successfully!
+              </div>
+            )}
+            <button className="btn-renew" onClick={handleRenew}>Renew Policy</button>
+            <Link to="/premium" className="btn-details" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              View Premium Details
+            </Link>
           </div>
         </section>
 
@@ -69,76 +115,36 @@ const Policy = () => {
         <section className="available-plans-section">
           <h3 className="section-title">Available Plans</h3>
           <div className="plans-grid">
-            
-            <div className="plan-card">
-              <div className="plan-header">
-                <h4>Basic Protection</h4>
-                <div className="price-tag">
-                  <span className="amount">₹49</span><span className="period">/week</span>
+            {PLANS.map((plan, i) => {
+              const isActive = plan.name === currentPlanName;
+              return (
+                <div key={i} className={`plan-card ${plan.recommended ? 'recommended' : ''} ${isActive ? 'active-border' : ''}`}>
+                  {plan.recommended && <div className="recommended-badge">Recommended</div>}
+                  <div className={`plan-header ${plan.recommended ? 'mt-badge' : ''}`}>
+                    <h4>{plan.name}</h4>
+                    <div className="price-tag">
+                      <span className="amount">₹{plan.premium}</span><span className="period">/week</span>
+                    </div>
+                    <div className="risk-level">Risk Level: {plan.risk}</div>
+                  </div>
+                  <div className="plan-limits">
+                    <div className="limit-row"><span>Coverage</span><span>₹{plan.coverage.toLocaleString()}</span></div>
+                    <div className="limit-row"><span>Payout/Hour</span><span>₹{plan.payout}</span></div>
+                    <div className="limit-row"><span>Max Hours</span><span>{plan.maxHours} hrs/week</span></div>
+                  </div>
+                  <ul className="plan-features">
+                    {plan.features.map((feat, fi) => (
+                      <li key={fi}><CheckCircle2 size={16} className="text-teal" /> {feat}</li>
+                    ))}
+                  </ul>
+                  {isActive ? (
+                    <button className="btn-current">Current Plan</button>
+                  ) : (
+                    <button className="btn-select" onClick={() => handleSelectPlan(plan.name)}>Select Plan</button>
+                  )}
                 </div>
-                <div className="risk-level">Risk Level: Low</div>
-              </div>
-              <div className="plan-limits">
-                <div className="limit-row"><span>Coverage</span><span>₹2,000</span></div>
-                <div className="limit-row"><span>Payout/Hour</span><span>₹100</span></div>
-                <div className="limit-row"><span>Max Hours</span><span>20 hrs/week</span></div>
-              </div>
-              <ul className="plan-features">
-                <li><CheckCircle2 size={16} className="text-teal" /> Weather protection</li>
-                <li><CheckCircle2 size={16} className="text-teal" /> Basic fraud detection</li>
-                <li><CheckCircle2 size={16} className="text-teal" /> Email support</li>
-              </ul>
-              <button className="btn-select">Select Plan</button>
-            </div>
-
-            <div className="plan-card recommended">
-              <div className="recommended-badge">Recommended</div>
-              <div className="plan-header mt-badge">
-                <h4>Standard Shield</h4>
-                <div className="price-tag">
-                  <span className="amount">₹75</span><span className="period">/week</span>
-                </div>
-                <div className="risk-level">Risk Level: Medium</div>
-              </div>
-              <div className="plan-limits">
-                <div className="limit-row"><span>Coverage</span><span>₹3,000</span></div>
-                <div className="limit-row"><span>Payout/Hour</span><span>₹150</span></div>
-                <div className="limit-row"><span>Max Hours</span><span>20 hrs/week</span></div>
-              </div>
-              <ul className="plan-features">
-                <li><CheckCircle2 size={16} className="text-teal" /> All weather events</li>
-                <li><CheckCircle2 size={16} className="text-teal" /> Pollution alerts</li>
-                <li><CheckCircle2 size={16} className="text-teal" /> Advanced fraud detection</li>
-                <li><CheckCircle2 size={16} className="text-teal" /> Priority support</li>
-                <li><CheckCircle2 size={16} className="text-teal" /> Instant payouts</li>
-              </ul>
-              <button className="btn-current">Current Plan</button>
-            </div>
-
-            <div className="plan-card">
-              <div className="plan-header">
-                <h4>Premium Guard</h4>
-                <div className="price-tag">
-                  <span className="amount">₹120</span><span className="period">/week</span>
-                </div>
-                <div className="risk-level">Risk Level: High</div>
-              </div>
-              <div className="plan-limits">
-                <div className="limit-row"><span>Coverage</span><span>₹5,000</span></div>
-                <div className="limit-row"><span>Payout/Hour</span><span>₹250</span></div>
-                <div className="limit-row"><span>Max Hours</span><span>20 hrs/week</span></div>
-              </div>
-              <ul className="plan-features">
-                <li><CheckCircle2 size={16} className="text-teal" /> Complete coverage</li>
-                <li><CheckCircle2 size={16} className="text-teal" /> All disruptions</li>
-                <li><CheckCircle2 size={16} className="text-teal" /> Premium fraud detection</li>
-                <li><CheckCircle2 size={16} className="text-teal" /> 24/7 support</li>
-                <li><CheckCircle2 size={16} className="text-teal" /> Instant payouts</li>
-                <li><CheckCircle2 size={16} className="text-teal" /> Bonus protection</li>
-              </ul>
-              <button className="btn-select">Select Plan</button>
-            </div>
-
+              );
+            })}
           </div>
         </section>
 
@@ -171,39 +177,59 @@ const Policy = () => {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>Mar 7 - Mar 14, 2026</td>
-                  <td>₹75</td>
-                  <td><span className="status-badge active">Active</span></td>
-                  <td>2</td>
-                  <td className="payout-amount active">₹900</td>
-                </tr>
-                <tr>
-                  <td>Feb 28 - Mar 6, 2026</td>
-                  <td>₹75</td>
-                  <td><span className="status-badge completed">Completed</span></td>
-                  <td>1</td>
-                  <td className="payout-amount active">₹450</td>
-                </tr>
-                <tr>
-                  <td>Feb 21 - Feb 27, 2026</td>
-                  <td>₹75</td>
-                  <td><span className="status-badge completed">Completed</span></td>
-                  <td>0</td>
-                  <td className="payout-amount inactive">₹0</td>
-                </tr>
-                <tr>
-                  <td>Feb 14 - Feb 20, 2026</td>
-                  <td>₹75</td>
-                  <td><span className="status-badge completed">Completed</span></td>
-                  <td>3</td>
-                  <td className="payout-amount active">₹1350</td>
-                </tr>
+                {(user.policyHistory || []).map((p, i) => (
+                  <tr key={i}>
+                    <td>{p.period}</td>
+                    <td>₹{p.premium}</td>
+                    <td><span className={`status-badge ${p.status.toLowerCase()}`}>{p.status}</span></td>
+                    <td>{p.claims}</td>
+                    <td className={`payout-amount ${p.totalPayout > 0 ? 'active' : 'inactive'}`}>₹{p.totalPayout}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </section>
 
+        {/* Password Verification Modal */}
+        {showPasswordModal && (
+          <div className="policy-modal-overlay">
+            <div className="policy-modal confirm-modal">
+              <div className="modal-header">
+                <h3>Confirm Plan Change</h3>
+                <button className="close-btn" onClick={() => setShowPasswordModal(false)}><X size={20} /></button>
+              </div>
+              <div className="modal-body">
+                <div className="plan-change-warning">
+                  <Lock size={24} />
+                  <p>
+                    You are switching to the <strong>{pendingPlan}</strong>. 
+                    Please enter your password to authorize this coverage change.
+                  </p>
+                </div>
+                <div className="prof-field" style={{ marginTop: 20 }}>
+                  <div className="pf-label">Account Password</div>
+                  <div className="password-input-wrap">
+                    <Key size={16} className="input-icon" />
+                    <input 
+                      type="password" 
+                      className="pf-input" 
+                      placeholder="Enter password to confirm"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleConfirmPlanChange()}
+                    />
+                  </div>
+                  {passwordError && <div className="error-text">{passwordError}</div>}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn-cancel" onClick={() => setShowPasswordModal(false)}>Cancel</button>
+                <button className="btn-confirm" onClick={handleConfirmPlanChange}>Confirm Change</button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

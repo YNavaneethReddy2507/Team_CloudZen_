@@ -22,31 +22,30 @@ const StatusBadge = ({ status }) => {
   return <span className={`claim-status-badge ${cls}`}>{status}</span>;
 };
 
-const handleDownloadCSV = () => {
-  const headers = ['Claim ID', 'Type', 'Date', 'Amount (INR)', 'Status', 'Duration', 'Trigger Time'];
-  const rows = claimsData.map(c => [
-    c.id,
-    c.type,
-    c.date,
-    c.amount,
-    c.status,
-    c.duration,
-    c.triggerTime
-  ]);
-  
-  const csvContent = [headers, ...rows].map(e => e.join(',')).join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', 'CloudZen_Claims_History.csv');
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-
 const Claims = () => {
-  const { user } = useUser();
+  const { user, simulateClaim } = useUser();
+
+  const handleDownloadCSV = () => {
+    const headers = ['Claim ID', 'Type', 'Date', 'Amount (INR)', 'Status', 'Duration', 'Trigger Time'];
+    const rows = (user.claims || []).map(c => [
+      c.id, c.type, c.date, c.amount, c.status, c.duration, c.triggerTime
+    ]);
+    
+    // Properly handle commas by wrapping in quotes
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(val => `"${val}"`).join(','))
+      .join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'CloudZen_Claims_History.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="dashboard-layout">
@@ -54,9 +53,14 @@ const Claims = () => {
 
       {/* Main Content */}
       <main className="main-content">
-        <header className="main-header">
-          <h1>Claims History</h1>
-          <p>Track your <span className="claims-highlight">automatic claim triggers</span> and payouts</p>
+        <header className="main-header flex-header">
+          <div>
+            <h1>Claims History</h1>
+            <p>Track your <span className="claims-highlight">automatic claim triggers</span> and payouts</p>
+          </div>
+          <button className="simulate-btn" onClick={simulateClaim}>
+            <AlertTriangle size={14} /> Simulate Disruption
+          </button>
         </header>
 
         {/* Stats */}
@@ -124,48 +128,56 @@ const Claims = () => {
           </button>
         </div>
         <div className="claims-list-container">
-          {claimsData.map((claim, i) => (
-            <div key={i} className="claim-row">
-              <div className="claim-row-top">
-                <div className="claim-row-left">
-                  <ClaimIcon type={claim.icon} />
-                  <div>
-                    <div className="claim-title">{claim.type}</div>
-                    <div className="claim-meta">
-                      <FileText size={12} /> {claim.id} &nbsp;&nbsp; {claim.date}
+          {(user.claims || []).length > 0 ? (
+            (user.claims || []).map((claim, i) => (
+              <div key={i} className="claim-row">
+                <div className="claim-row-top">
+                  <div className="claim-row-left">
+                    <ClaimIcon type={claim.icon} />
+                    <div>
+                      <div className="claim-title">{claim.type}</div>
+                      <div className="claim-meta">
+                        <FileText size={12} /> {claim.id} &nbsp;&nbsp; {claim.date}
+                      </div>
                     </div>
                   </div>
+                  <div className="claim-row-right">
+                    <div className="claim-amount-text">₹{(claim.amount || 0).toLocaleString()}</div>
+                    <StatusBadge status={claim.status} />
+                  </div>
                 </div>
-                <div className="claim-row-right">
-                  <div className="claim-amount-text">₹{claim.amount.toLocaleString()}</div>
-                  <StatusBadge status={claim.status} />
-                </div>
-              </div>
 
-              <div className="claim-row-details">
-                <div className="claim-detail-col">
-                  <div className="cd-label">Duration</div>
-                  <div className="cd-value">{claim.duration}</div>
+                <div className="claim-row-details">
+                  <div className="claim-detail-col">
+                    <div className="cd-label">Duration</div>
+                    <div className="cd-value">{claim.duration}</div>
+                  </div>
+                  <div className="claim-detail-col">
+                    <div className="cd-label">Trigger Time</div>
+                    <div className="cd-value">{claim.triggerTime}</div>
+                  </div>
                 </div>
-                <div className="claim-detail-col">
-                  <div className="cd-label">Trigger Time</div>
-                  <div className="cd-value">{claim.triggerTime}</div>
-                </div>
-              </div>
 
-              <div className="claim-description">{claim.description}</div>
-              {claim.paidOn && (
-                <div className="claim-paid-on">
-                  <CheckCircle2 size={13} /> {claim.paidOn}
-                </div>
-              )}
-              {claim.status === 'Rejected' && (
-                <div className="claim-rejected-note">
-                  <XCircle size={13} /> {claim.description}
-                </div>
-              )}
+                <div className="claim-description">{claim.description}</div>
+                {claim.paidOn && (
+                  <div className="claim-paid-on">
+                    <CheckCircle2 size={13} /> {claim.paidOn}
+                  </div>
+                )}
+                {claim.status === 'Rejected' && (
+                  <div className="claim-rejected-note">
+                    <XCircle size={13} /> {claim.description}
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="empty-claims-state">
+              <Shield size={40} className="empty-icon" />
+              <h4>No claims triggered yet</h4>
+              <p>Your automatic shield is active. Relax and focus on deliveries!</p>
             </div>
-          ))}
+          )}
         </div>
 
         {/* Claim Eligibility Criteria */}

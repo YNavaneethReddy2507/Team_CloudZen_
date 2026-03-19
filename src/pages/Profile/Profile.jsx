@@ -1,15 +1,57 @@
 import React, { useState } from 'react';
 import {
-  Shield, LayoutDashboard, FileText, AlertTriangle,
-  CreditCard, Bell, User, LogOut, TrendingUp,
+  Shield, AlertTriangle,
+  CreditCard, Bell, User,
   Mail, Phone, MapPin, Settings, Lock,
-  Camera, Briefcase, Clock, Save, X
+  Camera, Briefcase, Clock, Save, X,
+  ZoomIn, ZoomOut, Move, ShieldCheck,
+  Key, Truck
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import { useUser } from '../../context/UserContext';
-import { transactions, claimsData } from '../../constants/mockData';
+import { claimsData } from '../../constants/mockData';
 import './Profile.css';
+
+// Demographic Engine: 50 Unique Profiles for High-Fidelity Demo
+const MOCK_PROFILES = Array.from({ length: 50 }, (_, i) => {
+  const names = ['Arjun', 'Siddharth', 'Aditya', 'Vikram', 'Rohan', 'Karan', 'Ishaan', 'Aarav', 'Vivaan', 'Kabir', 'Ananya', 'Priya', 'Saira', 'Zara', 'Meera', 'Riya', 'Kiara', 'Myra', 'Diya', 'Sana'];
+  const lastNames = ['Sharma', 'Verma', 'Gupta', 'Malhotra', 'Kapoor', 'Singhania', 'Mehta', 'Reddy', 'Nair', 'Patel'];
+  const platforms = ['Zomato', 'Swiggy', 'Zepto', 'Blinkit'];
+  const cities = ['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Pune'];
+  const areas = ['Andheri East', 'Kurla', 'South Mumbai', 'Bandra', 'Powai'];
+  
+  const fName = names[i % names.length];
+  const lName = lastNames[i % lastNames.length];
+  const fullName = `${fName} ${lName}`;
+  const city = cities[i % cities.length];
+  const area = areas[i % areas.length];
+  
+  return {
+    fullName,
+    firstName: fName,
+    lastName: lName,
+    role: `${platforms[i % platforms.length]} Partner`,
+    profileImage: null, // Hard reset for demo profiles
+    email: `${fName.toLowerCase()}.${lName.toLowerCase()}${i}@email.com`,
+    phone: `+91 ${90000 + i} ${10000 + i}`,
+    city,
+    area,
+    platform: platforms[i % platforms.length],
+    partnerId: `${platforms[i % platforms.length].toUpperCase().slice(0,3)}-2026-CH-${10000 + i}`,
+    workingHours: `${6 + (i % 6)} hours/day`,
+    primaryZones: [area, areas[(i + 1) % areas.length]],
+    status: i % 5 === 0 ? 'Suspended' : 'Active',
+    coverageStatus: i % 7 === 0 ? 'Paused' : 'Active',
+    totalClaims: Math.floor(Math.random() * 20),
+    memberSince: 'January 2026',
+    password: '123456',
+    planName: i % 3 === 0 ? 'Premium Pulse' : i % 3 === 1 ? 'Standard Shield' : 'Lite Guard',
+    vehicleType: i % 3 === 0 ? 'Four-Wheeler' : i % 2 === 0 ? 'Three-Wheeler' : 'Two-Wheeler',
+    vehicleNumber: `MH-01-BK-${1000 + i}`,
+    licenseNumber: `DL-2026-${5000 + i}`
+  };
+});
 
 const Toggle = ({ defaultOn = false, color = '#1a4f78' }) => {
   const [on, setOn] = useState(defaultOn);
@@ -26,6 +68,112 @@ const Toggle = ({ defaultOn = false, color = '#1a4f78' }) => {
 
 const Profile = () => {
   const { user, updateUser } = useUser();
+  const fileInputRef = React.useRef(null);
+
+  const handleImageClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [tempCropImg, setTempCropImg] = useState(null);
+  const [cropPos, setCropPos] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          setTempCropImg(event.target.result);
+          setShowCropModal(true);
+          
+          // Calculate initial fit zoom for 400x400 container
+          // We want the image to cover the 350x350 square at minimum
+          // If width=1000, 400/1000 = 0.4.
+          const fitZoom = Math.min(400 / img.width, 400 / img.height);
+          setZoom(fitZoom);
+          
+          // Center the image in the 400x400 container
+          setCropPos({
+            x: (400 - img.width * fitZoom) / 2,
+            y: (400 - img.height * fitZoom) / 2
+          });
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const startDrag = (e) => {
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - cropPos.x,
+      y: e.clientY - cropPos.y
+    });
+  };
+
+  const onDrag = (e) => {
+    if (!isDragging) return;
+    setCropPos({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y
+    });
+  };
+
+  const endDrag = () => setIsDragging(false);
+
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [deactivatePass, setDeactivatePass] = useState('');
+  const [deactivateError, setDeactivateError] = useState('');
+  const [privacyPrefs, setPrivacyPrefs] = useState({
+    marketing: true,
+    dataSharing: false,
+    analytics: true
+  });
+
+  const handleConfirmDeactivation = () => {
+    if (deactivatePass === user.password) {
+      const newStatus = user.coverageStatus === 'Active' ? 'Paused' : 'Active';
+      updateUser({ coverageStatus: newStatus });
+      setShowDeactivateModal(false);
+      setDeactivatePass('');
+      setDeactivateError('');
+      alert(`Account ${newStatus === 'Paused' ? 'deactivated' : 'reactivated'} successfully.`);
+    } else {
+      setDeactivateError('Incorrect password. Please try again.');
+    }
+  };
+  const applyCrop = () => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const size = 400;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Anchored math for anchored transformOrigin: '0 0'
+      const cropX = (25 - cropPos.x) / zoom;
+      const cropY = (25 - cropPos.y) / zoom;
+      const cropSize = 350 / zoom;
+
+      // Draw with safety bounds to prevent black images
+      ctx.drawImage(img, 
+        Math.max(0, cropX), Math.max(0, cropY), 
+        Math.min(img.width - cropX, cropSize), Math.min(img.height - cropY, cropSize),
+        0, 0, size, size
+      );
+      updateUser({ profileImage: canvas.toDataURL('image/jpeg', 0.9) });
+      setShowCropModal(false);
+    };
+    img.src = tempCropImg;
+  };
 
   // Personal Info temp state
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
@@ -44,6 +192,9 @@ const Profile = () => {
     partnerId: user.partnerId,
     workingHours: user.workingHours,
     primaryZones: user.primaryZones.join(', '),
+    vehicleType: user.vehicleType || 'Two-Wheeler',
+    vehicleNumber: user.vehicleNumber || 'MH-01-BK-4512',
+    licenseNumber: user.licenseNumber || 'DL-2025-IND-8845',
   });
 
   // Password temp state
@@ -81,6 +232,9 @@ const Profile = () => {
       partnerId: user.partnerId,
       workingHours: user.workingHours,
       primaryZones: user.primaryZones.join(', '),
+      vehicleType: user.vehicleType || 'Two-Wheeler',
+      vehicleNumber: user.vehicleNumber || 'MH-01-BK-4512',
+      licenseNumber: user.licenseNumber || 'DL-2025-IND-8845',
     });
     setIsEditingWork(true);
   };
@@ -131,7 +285,7 @@ const Profile = () => {
     const paymentHeaders = ['', '', '', '', '', '', ''];
     const paymentTitle = ['SECTION: PAYMENT TRANSACTIONS', '', '', '', '', '', ''];
     const paymentColumns = ['Date', 'Transaction ID', 'Type', 'Details', 'Method', 'Amount', 'Status'];
-    const paymentRows = transactions.map(t => [
+    const paymentRows = (user.transactions || []).map(t => [
       t.date, t.txn, t.type, t.details, t.method, t.amount.replace('₹', ''), 'Completed'
     ].map(val => `"${val}"`));
 
@@ -222,8 +376,23 @@ const Profile = () => {
         {/* Profile Banner */}
         <div className="profile-banner">
           <div className="profile-avatar-wrap">
-            <div className="profile-avatar-lg">{user.fullName.split(' ').map(n => n[0]).join('')}</div>
-            <button className="avatar-camera-btn"><Camera size={14} /></button>
+            <div className="profile-avatar-lg" onClick={handleImageClick} style={{ cursor: 'pointer' }}>
+              {user.profileImage ? (
+                <img src={user.profileImage} alt="Profile" className="avatar-img-lg" />
+              ) : (
+                user.fullName.split(' ').map(n => n[0]).join('')
+              )}
+            </div>
+            <button className="avatar-camera-btn" onClick={handleImageClick}>
+              <Camera size={14} />
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageChange}
+              style={{ display: 'none' }}
+              accept="image/*"
+            />
           </div>
           <div className="profile-banner-info">
             <div className="profile-banner-name">{user.fullName}</div>
@@ -402,6 +571,48 @@ const Profile = () => {
                 </div>
               )}
             </div>
+            <div className="prof-field">
+              <div className="pf-label">Vehicle Type</div>
+              {isEditingWork ? (
+                <select
+                  className="pf-input"
+                  value={tempWork.vehicleType}
+                  onChange={(e) => setTempWork({ ...tempWork, vehicleType: e.target.value })}
+                >
+                  <option value="Two-Wheeler">Two-Wheeler</option>
+                  <option value="Three-Wheeler">Three-Wheeler</option>
+                  <option value="Four-Wheeler">Four-Wheeler</option>
+                </select>
+              ) : (
+                <div className="pf-value"><Truck size={15} /> {user.vehicleType || 'Two-Wheeler'}</div>
+              )}
+            </div>
+            <div className="prof-field">
+              <div className="pf-label">Vehicle Registration Number</div>
+              {isEditingWork ? (
+                <input
+                  type="text"
+                  className="pf-input"
+                  value={tempWork.vehicleNumber}
+                  onChange={(e) => setTempWork({ ...tempWork, vehicleNumber: e.target.value })}
+                />
+              ) : (
+                <div className="pf-value"><CreditCard size={15} /> {user.vehicleNumber || 'MH-01-BK-4512'}</div>
+              )}
+            </div>
+            <div className="prof-field">
+              <div className="pf-label">Driving License Number</div>
+              {isEditingWork ? (
+                <input
+                  type="text"
+                  className="pf-input"
+                  value={tempWork.licenseNumber}
+                  onChange={(e) => setTempWork({ ...tempWork, licenseNumber: e.target.value })}
+                />
+              ) : (
+                <div className="pf-value"><Shield size={15} /> {user.licenseNumber || 'DL-2025-IND-8845'}</div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -517,21 +728,189 @@ const Profile = () => {
         </div>
 
         {/* Account Actions */}
-        <div className="prof-section-card" style={{ marginBottom: 40 }}>
+        <div className="prof-section-card">
           <h3 className="prof-standalone-title">Account Actions</h3>
           <div className="account-action" onClick={handleExportData} style={{ cursor: 'pointer' }}>
             <div className="aa-title">Download My Data</div>
             <div className="aa-sub teal-link">Export all your insurance data</div>
           </div>
-          <div className="account-action">
+          <div className="account-action" onClick={() => setShowPrivacyModal(true)}>
             <div className="aa-title">Privacy Settings</div>
             <div className="aa-sub teal-link">Manage your data and privacy preferences</div>
           </div>
-          <div className="account-action danger">
-            <div className="aa-title danger-text">Deactivate Account</div>
-            <div className="aa-sub danger-sub">Temporarily pause your insurance coverage</div>
+          <div className={`account-action ${user.coverageStatus === 'Active' ? 'danger' : 'success-action'}`} onClick={() => setShowDeactivateModal(true)}>
+            <div className="aa-title">{user.coverageStatus === 'Active' ? 'Deactivate Account' : 'Reactivate Account'}</div>
+            <div className="aa-sub">{user.coverageStatus === 'Active' ? 'Temporarily pause your insurance coverage' : 'Resume your insurance coverage'}</div>
           </div>
         </div>
+
+        {/* Demo Profiles Switcher (50 Profiles) */}
+        <div className="prof-section-card" style={{ marginBottom: 40 }}>
+          <div className="prof-section-header">
+            <h3>Demographic Demo Engine</h3>
+            <span className="badge-demo">50 Active Profiles</span>
+          </div>
+          <p className="section-intro">Quickly switch between these 50 identities to test different risk profiles, platforms, and coverage states across the platform.</p>
+          <div className="demo-profiles-strip">
+            {MOCK_PROFILES.map((p, idx) => (
+              <div 
+                key={idx} 
+                className={`demo-profile-card ${user.email === p.email ? 'active' : ''}`}
+                onClick={() => {
+                  updateUser(p);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              >
+                <div className="demo-avatar">
+                  {p.firstName[0]}{p.lastName[0]}
+                  {p.coverageStatus === 'Paused' && <div className="status-dot paused" />}
+                  {p.status === 'Suspended' && <div className="status-dot suspended" />}
+                </div>
+                <div className="demo-info">
+                  <div className="demo-name">{p.fullName}</div>
+                  <div className="demo-platform">{p.platform} • {p.area}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Privacy Modal */}
+        {showPrivacyModal && (
+          <div className="crop-modal-overlay">
+            <div className="crop-modal privacy-modal">
+              <div className="crop-header">
+                <h3>Privacy Settings</h3>
+                <button className="close-btn" onClick={() => setShowPrivacyModal(false)}><X size={20} /></button>
+              </div>
+              <div className="privacy-body">
+                <div className="security-item">
+                  <div className="si-left">
+                    <ShieldCheck size={18} className="si-icon" />
+                    <div>
+                      <div className="si-title">Marketing Communications</div>
+                      <div className="si-sub">Receive product updates and offers</div>
+                    </div>
+                  </div>
+                  <Toggle 
+                    defaultOn={privacyPrefs.marketing} 
+                    onToggle={(val) => setPrivacyPrefs({...privacyPrefs, marketing: val})} 
+                  />
+                </div>
+                <div className="security-item">
+                  <div className="si-left">
+                    <AlertTriangle size={18} className="si-icon muted" />
+                    <div>
+                      <div className="si-title">Data Sharing</div>
+                      <div className="si-sub">Share anonymized data with partners</div>
+                    </div>
+                  </div>
+                  <Toggle 
+                    defaultOn={privacyPrefs.dataSharing} 
+                    onToggle={(val) => setPrivacyPrefs({...privacyPrefs, dataSharing: val})} 
+                  />
+                </div>
+              </div>
+              <div className="crop-footer">
+                <button className="prof-save-btn" onClick={() => setShowPrivacyModal(false)}>Save Preferences</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Deactivate Modal */}
+        {showDeactivateModal && (
+          <div className="crop-modal-overlay">
+            <div className="crop-modal deactivate-modal">
+              <div className="crop-header">
+                <h3>{user.coverageStatus === 'Active' ? 'Confirm Deactivation' : 'Confirm Reactivation'}</h3>
+                <button className="close-btn" onClick={() => setShowDeactivateModal(false)}><X size={20} /></button>
+              </div>
+              <div className="deactivate-body">
+                <div className="warning-banner">
+                  <AlertTriangle size={24} />
+                  <p>
+                    {user.coverageStatus === 'Active' 
+                      ? "You are about to temporarily pause your insurance coverage. You will not be covered for any incidents until you reactivate."
+                      : "You are about to resume your insurance coverage. Your standard premiums will apply."}
+                  </p>
+                </div>
+                <div className="prof-field" style={{ marginTop: 20 }}>
+                  <div className="pf-label">Enter Password to Confirm</div>
+                  <div className="pf-input-wrap">
+                    <Key size={16} className="input-icon" />
+                    <input 
+                      type="password" 
+                      className="pf-input" 
+                      placeholder="Your account password"
+                      value={deactivatePass}
+                      onChange={(e) => setDeactivatePass(e.target.value)}
+                    />
+                  </div>
+                  {deactivateError && <div className="error-text">{deactivateError}</div>}
+                </div>
+              </div>
+              <div className="crop-footer">
+                <button className="prof-cancel-btn" onClick={() => setShowDeactivateModal(false)}>Cancel</button>
+                <button 
+                  className={user.coverageStatus === 'Active' ? 'prof-save-btn danger-bg' : 'prof-save-btn'} 
+                  onClick={handleConfirmDeactivation}
+                >
+                  Confirm {user.coverageStatus === 'Active' ? 'Deactivation' : 'Reactivation'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showCropModal && (
+          <div className="crop-modal-overlay">
+            <div className="crop-modal">
+              <div className="crop-header">
+                <h3>Adjust Profile Photo</h3>
+                <button className="close-btn" onClick={() => setShowCropModal(false)}><X size={20} /></button>
+              </div>
+              <div className="crop-container" onMouseMove={onDrag} onMouseUp={endDrag} onMouseLeave={endDrag}>
+                <div className="crop-viewfinder">
+                  <div className="crop-grid-overlay" />
+                  <img 
+                    src={tempCropImg} 
+                    alt="To Crop" 
+                    className="crop-preview-img"
+                    style={{
+                      transform: `translate(${cropPos.x}px, ${cropPos.y}px) scale(${zoom})`,
+                      transformOrigin: '0 0',
+                      cursor: isDragging ? 'grabbing' : 'grab'
+                    }}
+                    onMouseDown={startDrag}
+                    draggable="false"
+                  />
+                </div>
+              </div>
+              <div className="crop-controls">
+                <div className="zoom-slider-wrap">
+                  <ZoomOut size={16} />
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="3" 
+                    step="0.1" 
+                    value={zoom} 
+                    onChange={(e) => setZoom(parseFloat(e.target.value))} 
+                  />
+                  <ZoomIn size={16} />
+                </div>
+                <div className="crop-instructions">
+                  <Move size={12} /> Drag to position your photo
+                </div>
+              </div>
+              <div className="crop-footer">
+                <button className="prof-cancel-btn" onClick={() => setShowCropModal(false)}>Cancel</button>
+                <button className="prof-save-btn" onClick={applyCrop}>Apply Crop</button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

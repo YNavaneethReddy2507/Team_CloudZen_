@@ -22,4 +22,9 @@ export const APP_USER = {
   // Coverage
   status: 'Active',
   totalClaims: 12,
+
+  // Vehicle Credentials
+  vehicleType: 'Two-Wheeler',
+  vehicleNumber: 'MH-01-BK-4512',
+  licenseNumber: 'DL-2025-IND-8845',
 };

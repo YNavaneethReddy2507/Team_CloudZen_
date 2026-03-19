@@ -8,7 +8,7 @@ import { useUser } from '../../context/UserContext';
 import './Sidebar.css';
 
 const Sidebar = ({ activePage }) => {
-  const { user } = useUser();
+  const { user, logoutUser } = useUser();
 
   const navItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/dashboard', id: 'dashboard' },
@@ -23,13 +23,19 @@ const Sidebar = ({ activePage }) => {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <Shield size={24} />
-        <span>DeliveryShield</span>
+        <img src="/logo.png" alt="ShieldPath" className="sidebar-logo-img" />
+        <span>ShieldPath</span>
       </div>
 
       <div className="user-profile">
-        <div className="avatar">
-           {user.fullName.split(' ').map(n => n[0]).join('')}
+        <div className="avatar-container">
+          <div className="avatar">
+            {user.profileImage ? (
+              <img src={user.profileImage} alt="Profile" className="avatar-img" />
+            ) : (
+              (user.fullName || 'User').split(' ').map(n => n[0]).join('')
+            )}
+          </div>
         </div>
         <div className="user-info">
           <span className="user-name">{user.fullName}</span>
@@ -50,7 +56,11 @@ const Sidebar = ({ activePage }) => {
         ))}
       </nav>
 
-      <Link to="/login" className="logout-btn">
+      <Link 
+        to="/login" 
+        className="logout-btn"
+        onClick={() => logoutUser()}
+      >
         <LogOut size={20} />
         <span>Logout</span>
       </Link>

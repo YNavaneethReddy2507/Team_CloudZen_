@@ -9,35 +9,8 @@ import {
 import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import { useUser } from '../../context/UserContext';
+import { PLANS } from '../../constants/plans';
 import './PremiumDetails.css';
-
-const pieData = [
-  { name: 'Base Premium', value: 40, color: '#1a4f78' },
-  { name: 'Weather Adjustment', value: 15, color: '#2dd4bf' },
-  { name: 'Zone Risk', value: 12, color: '#a78bfa' },
-  { name: 'Pollution Factor', value: 8, color: '#1d4ed8' },
-];
-
-const riskFactors = [
-  { label: 'Weather Risk', value: 65, color: '#1a4f78', desc: 'Based on historical rainfall and weather patterns' },
-  { label: 'Zone Safety', value: 75, color: '#2dd4bf', desc: 'Area traffic and disruption history' },
-  { label: 'Pollution Index', value: 45, color: '#1d4ed8', desc: 'Average AQI levels in your zone' },
-  { label: 'Traffic Disruption', value: 55, color: '#a78bfa', desc: 'Historical traffic congestion data' },
-];
-
-const zones = [
-  { name: 'South Mumbai', level: 'Low Risk', pct: 35, color: '#f0fdf4', border: '#86efac', dot: '#22c55e', badge: '' },
-  { name: 'Andheri East', level: 'Medium', pct: 60, color: '#fffbeb', border: '#fde68a', dot: '#f59e0b', badge: 'Your Zone', current: true },
-  { name: 'Kurla', level: 'High Risk', pct: 85, color: '#fef2f2', border: '#fca5a5', dot: '#ef4444', badge: '' },
-  { name: 'Bandra', level: 'Medium', pct: 55, color: '#fffbeb', border: '#fde68a', dot: '#f59e0b', badge: '' },
-];
-
-const weeks = [
-  { label: 'Week 1', amount: 72, change: null },
-  { label: 'Week 2', amount: 75, change: '+₹3' },
-  { label: 'Week 3', amount: 73, change: '+₹2' },
-  { label: 'Week 4', amount: 75, change: '+₹2' },
-];
 
 const RADIAN = Math.PI / 180;
 const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
@@ -53,23 +26,36 @@ const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent
 
 const PremiumDetails = () => {
   const { user } = useUser();
-  const risk = user.riskProfile || { level: 'Medium', score: 60, premium: 75, riskFactors: { weather: 65, safety: 75, pollution: 45, traffic: 55 } };
+  const currentPlanName = user.planName || 'Standard Shield';
+  const currentPlan = PLANS.find(p => p.name === currentPlanName) || PLANS[1];
 
-  const dynamicPieData = [
-    { name: 'Base Premium', value: 40, color: '#1a4f78' },
-    { name: 'Weather Adjustment', value: Math.round(risk.premium * 0.2), color: '#2dd4bf' },
-    { name: 'Zone Risk', value: Math.round(risk.premium * 0.16), color: '#a78bfa' },
-    { name: 'Pollution Factor', value: Math.round(risk.premium * 0.1), color: '#1d4ed8' },
+  const pieData = [
+    { name: 'Base Premium', value: currentPlan.basePremium, color: '#1a4f78' },
+    { name: 'Weather Adjustment', value: Math.round(currentPlan.premium * 0.2), color: '#2dd4bf' },
+    { name: 'Zone Risk', value: Math.round(currentPlan.premium * 0.16), color: '#a78bfa' },
+    { name: 'Pollution Factor', value: Math.round(currentPlan.premium * 0.1), color: '#1d4ed8' },
   ];
 
-  const dynamicRiskFactors = [
-    { label: 'Weather Risk', value: risk.riskFactors.weather, color: '#1a4f78', desc: 'Based on historical rainfall and weather patterns' },
-    { label: 'Zone Safety', value: risk.riskFactors.safety, color: '#2dd4bf', desc: 'Area traffic and disruption history' },
-    { label: 'Pollution Index', value: risk.riskFactors.pollution, color: '#1d4ed8', desc: 'Average AQI levels in your zone' },
-    { label: 'Traffic Disruption', value: risk.riskFactors.traffic, color: '#a78bfa', desc: 'Historical traffic congestion data' },
+  const riskFactors = [
+    { label: 'Weather Risk', value: currentPlan.riskScores.weather, color: '#1a4f78', desc: 'Based on historical rainfall and weather patterns' },
+    { label: 'Zone Safety', value: currentPlan.riskScores.safety, color: '#2dd4bf', desc: 'Area traffic and disruption history' },
+    { label: 'Pollution Index', value: currentPlan.riskScores.pollution, color: '#1d4ed8', desc: 'Average AQI levels in your zone' },
+    { label: 'Traffic Disruption', value: currentPlan.riskScores.traffic, color: '#a78bfa', desc: 'Historical traffic congestion data' },
   ];
 
-  const totalPremium = user.currentPremium || 75;
+  const zones = [
+    { name: 'South Mumbai', level: 'Low Risk', pct: 35, color: '#f0fdf4', border: '#86efac', dot: '#22c55e', badge: '' },
+    { name: 'Andheri East', level: 'Medium', pct: 60, color: '#fffbeb', border: '#fde68a', dot: '#f59e0b', badge: 'Your Zone', current: true },
+    { name: 'Kurla', level: 'High Risk', pct: 85, color: '#fef2f2', border: '#fca5a5', dot: '#ef4444', badge: '' },
+    { name: 'Bandra', level: 'Medium', pct: 55, color: '#fffbeb', border: '#fde68a', dot: '#f59e0b', badge: '' },
+  ];
+
+  const weeks = [
+    { label: 'Week 1', amount: currentPlan.premium - 3, change: null },
+    { label: 'Week 2', amount: currentPlan.premium, change: `+₹${currentPlan.riskAdjustment > 30 ? 3 : 2}` },
+    { label: 'Week 3', amount: currentPlan.premium - 2, change: '+₹2' },
+    { label: 'Week 4', amount: currentPlan.premium, change: '+₹2' },
+  ];
 
   return (
     <div className="dashboard-layout">
@@ -80,6 +66,9 @@ const PremiumDetails = () => {
         <header className="main-header">
           <h1>AI Premium Calculation</h1>
           <p>Your personalized premium based on <span className="highlight-link">intelligent risk assessment</span></p>
+          <div className="active-plan-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#f0fdfa', border: '1px solid #1c889a', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', color: '#1c889a', marginTop: '12px' }}>
+            <Shield size={14} /> Active Plan: {currentPlan.name}
+          </div>
         </header>
 
         {/* Premium Summary Card */}
@@ -90,7 +79,7 @@ const PremiumDetails = () => {
                 <Shield size={16} />
                 <span className="metric-label">Base Premium</span>
               </div>
-              <div className="metric-value">₹40</div>
+              <div className="metric-value">₹{currentPlan.basePremium}</div>
               <div className="metric-sub">Standard weekly rate</div>
             </div>
             <div className="premium-metric">
@@ -98,7 +87,7 @@ const PremiumDetails = () => {
                 <TrendingUp size={16} />
                 <span className="metric-label">Risk Adjustment</span>
               </div>
-              <div className="metric-value">+₹35</div>
+              <div className="metric-value">+₹{currentPlan.riskAdjustment}</div>
               <div className="metric-sub">Based on AI analysis</div>
             </div>
             <div className="premium-metric">
@@ -106,13 +95,13 @@ const PremiumDetails = () => {
                 <TrendingUp size={16} />
                 <span className="metric-label">Final Premium</span>
               </div>
-              <div className="metric-value">₹{user.currentPremium || 75}</div>
+              <div className="metric-value">₹{currentPlan.premium}</div>
               <div className="metric-sub">Your weekly payment</div>
             </div>
           </div>
           <div className="coverage-row">
             <span className="coverage-label-text">Coverage Amount</span>
-            <span className="coverage-value-text">₹3,000</span>
+            <span className="coverage-value-text">₹{currentPlan.coverage.toLocaleString()}</span>
           </div>
         </div>
 
@@ -147,18 +136,18 @@ const PremiumDetails = () => {
                     <stop offset="100%" stopColor="#2dd4bf" />
                   </linearGradient>
                 </defs>
-                <text x="100" y="90" textAnchor="middle" fontSize="28" fontWeight="700" fill="#0f172a">{risk.score}</text>
+                <text x="100" y="90" textAnchor="middle" fontSize="28" fontWeight="700" fill="#0f172a">{currentPlan.totalScore}</text>
                 <text x="100" y="108" textAnchor="middle" fontSize="11" fill="#64748b">Risk Score</text>
               </svg>
             </div>
             <div className="risk-badge-row">
-              <span className={`risk-badge ${risk.level.toLowerCase().includes('high') ? 'high' : risk.level.toLowerCase().includes('low') ? 'low' : 'medium'}`}>
-                {risk.level} Zone
+              <span className={`risk-badge ${currentPlan.risk.toLowerCase()}`}>
+                {currentPlan.risk} Risk Plan
               </span>
             </div>
             <div className="risk-location">
               <MapPin size={14} />
-              <span>{user.city} - {user.area}</span>
+              <span>{user.city || 'Mumbai'} - {user.area || 'Andheri East'}</span>
             </div>
           </div>
 

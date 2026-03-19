@@ -1,23 +1,36 @@
 import React, { useState } from 'react';
-import { Shield, Mail, Lock, Phone } from 'lucide-react';
+import { Mail, Lock, Phone } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useUser } from '../../context/UserContext';
 import './Auth.css';
 
 const LoginPage = () => {
-  const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
+  const [loginMethod, setLoginMethod] = useState('email'); 
   const navigate = useNavigate();
+  const { loginUser } = useUser();
+  
+  const [formData, setFormData] = useState({
+    identifier: '',
+    password: ''
+  });
+  const [error, setError] = useState('');
 
   const handleLogin = (e) => {
     e.preventDefault();
-    navigate('/dashboard');
+    const res = loginUser(formData.identifier, formData.password);
+    if (res.success) {
+      navigate('/dashboard');
+    } else {
+      setError(res.message);
+    }
   };
 
   return (
     <div className="auth-container">
       <div className="auth-header">
         <div className="auth-brand">
-          <Shield size={32} />
-          <span>DeliveryShield</span>
+          <img src="/logo.png" alt="ShieldPath Logo" className="auth-logo-main" />
+          <span>ShieldPath</span>
         </div>
         <p className="auth-subtitle">Welcome back! Login to your account</p>
       </div>
@@ -41,12 +54,19 @@ const LoginPage = () => {
         </div>
 
         <form className="auth-form" onSubmit={handleLogin}>
+          {error && <div className="error-banner" style={{ color: '#ef4444', marginBottom: 15, fontSize: 14 }}>{error}</div>}
           {loginMethod === 'email' ? (
             <div className="form-group">
               <label>Email Address</label>
               <div className="input-wrapper">
                 <Mail size={18} className="input-icon" />
-                <input type="email" placeholder="your@email.com" />
+                <input 
+                  type="email" 
+                  placeholder="your@email.com" 
+                  value={formData.identifier}
+                  onChange={(e) => setFormData({...formData, identifier: e.target.value})}
+                  required
+                />
               </div>
             </div>
           ) : (
@@ -54,7 +74,13 @@ const LoginPage = () => {
               <label>Phone Number</label>
               <div className="input-wrapper">
                 <Phone size={18} className="input-icon" />
-                <input type="tel" placeholder="+91 98765 43210" />
+                <input 
+                  type="tel" 
+                  placeholder="+91 98765 43210" 
+                  value={formData.identifier}
+                  onChange={(e) => setFormData({...formData, identifier: e.target.value})}
+                  required
+                />
               </div>
             </div>
           )}
@@ -63,7 +89,13 @@ const LoginPage = () => {
             <label>Password</label>
             <div className="input-wrapper">
               <Lock size={18} className="input-icon" />
-              <input type="password" placeholder="Enter your password" />
+              <input 
+                type="password" 
+                placeholder="Enter your password" 
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                required
+              />
             </div>
           </div>
 
@@ -96,6 +128,25 @@ const LoginPage = () => {
         <p className="auth-redirect">
           Don't have an account? <Link to="/register">Register now</Link>
         </p>
+
+        <div className="demo-account-section">
+          <div className="demo-divider">
+            <span>Demo Access</span>
+          </div>
+          <button 
+            type="button" 
+            className="demo-login-btn"
+            onClick={() => {
+              loginUser('rahul.kumar@email.com', '123456');
+              setTimeout(() => navigate('/dashboard'), 100);
+            }}
+          >
+            <div className="demo-btn-content">
+              <span className="demo-name">Login as Rahul Kumar (Demo)</span>
+              <span className="demo-creds">rahul.kumar@email.com • 123456</span>
+            </div>
+          </button>
+        </div>
       </div>
     </div>
   );

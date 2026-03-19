@@ -1,17 +1,16 @@
 import React from 'react';
 import { 
-  Shield, LayoutDashboard, FileText, AlertTriangle,
-  CreditCard, Bell, User, LogOut, TrendingUp,
-  CheckCircle2, Clock, Smartphone, ArrowDownLeft, ArrowUpRight, Building2,
-  Calendar as CalendarIcon,
+  CreditCard, Smartphone, ArrowDownLeft, ArrowUpRight,
+  Clock, Calendar as CalendarIcon,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  TrendingUp,
+  CheckCircle2
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Tooltip, Legend
 } from 'recharts';
-import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import { transactions } from '../../constants/mockData';
 import { useUser } from '../../context/UserContext';
@@ -26,40 +25,31 @@ const cashflowData = [
   { month: 'Mar', payouts: 1350, premiums: -150 },
 ];
 
-const handleDownloadCSV = () => {
-  const headers = ['Date', 'Transaction ID', 'Type', 'Details', 'Method', 'Amount', 'Status'];
-  const rows = transactions.map(t => [
-    t.date,
-    t.txn,
-    t.type,
-    t.details,
-    t.method,
-    t.amount.replace('₹', ''),
-    'Completed'
-  ]);
-  
-  // Properly handle commas by wrapping in quotes
-  const csvContent = [headers, ...rows]
-    .map(row => row.map(val => `"${val}"`).join(','))
-    .join('\n');
-
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'CloudZen_Transactions.csv';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
 
 const Payments = () => {
   const { user, updateUser } = useUser();
-  const methods = user.paymentMethods || [
-    { id: 1, type: 'UPI', name: 'UPI Handle', details: 'rahul@paytm', isPrimary: true, icon: 'upi', expiry: '', cvv: '', startDate: '' },
-    { id: 2, type: 'Card', name: 'Credit Card', details: '124563254896', isPrimary: false, icon: 'card', expiry: '2028-01-09', cvv: '123', startDate: '2022-01-01' },
-  ];
+  
+  const handleDownloadCSV = () => {
+    const headers = ['Date', 'Transaction ID', 'Type', 'Details', 'Method', 'Amount', 'Status'];
+    const rows = (user.transactions || []).map(t => [
+      t.date, t.txn, t.type, t.details, t.method, t.amount.replace('₹', ''), 'Completed'
+    ]);
+    
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(val => `"${val}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'CloudZen_Transactions.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+  const methods = user.paymentMethods || [];
 
   const [isAdding, setIsAdding] = React.useState(false);
   const [editingId, setEditingId] = React.useState(null);
@@ -100,11 +90,6 @@ const Payments = () => {
     });
     setEditingId(m.id);
     setIsAdding(false);
-  };
-
-  const getDisplayName = (type) => {
-    const maps = { 'Card': 'Credit Card', 'Debit': 'Debit Card', 'Bank': 'Net Banking', 'UPI': 'UPI Handle' };
-    return maps[type] || type;
   };
 
   const formatDetails = (m) => {
@@ -588,7 +573,7 @@ const Payments = () => {
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((t, i) => (
+                {(user.transactions || []).map((t, i) => (
                   <tr key={i}>
                     <td>
                       <div className="txn-date">{t.date}</div>
