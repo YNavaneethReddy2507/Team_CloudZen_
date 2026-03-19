@@ -1,6 +1,6 @@
 import React from 'react';
-import { 
-  Shield, LayoutDashboard, FileText, PieChart, AlertTriangle, 
+import {
+  Shield, LayoutDashboard, FileText, PieChart, AlertTriangle,
   CreditCard, Bell, User, LogOut, TrendingUp, CheckCircle2, CloudRain
 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
@@ -35,7 +35,7 @@ const Dashboard = () => {
           <Shield size={24} />
           <span>DeliveryShield</span>
         </div>
-        
+
         <div className="user-profile">
           <div className="avatar">RK</div>
           <div className="user-info">
@@ -53,26 +53,26 @@ const Dashboard = () => {
             <Shield size={20} />
             <span>My Policy</span>
           </Link>
-          <a href="/" className="nav-item">
+          <Link to="/premium" className="nav-item">
             <TrendingUp size={20} />
             <span>Premium Details</span>
-          </a>
-          <a href="/" className="nav-item">
+          </Link>
+          <Link to="/claims" className="nav-item">
             <FileText size={20} />
             <span>Claims</span>
-          </a>
-          <a href="/" className="nav-item">
+          </Link>
+          <Link to="/payments" className="nav-item">
             <CreditCard size={20} />
             <span>Payments</span>
-          </a>
+          </Link>
           <Link to="/alerts" className="nav-item">
             <Bell size={20} />
             <span>Alerts</span>
           </Link>
-          <a href="/" className="nav-item">
+          <Link to="/profile" className="nav-item">
             <User size={20} />
             <span>Profile</span>
-          </a>
+          </Link>
         </nav>
 
         <a href="/login" className="logout-btn">
@@ -109,7 +109,7 @@ const Dashboard = () => {
             <p>Active Coverage</p>
             <span className="trend green">↗ Valid until Mar 21</span>
           </div>
-          
+
           <div className="stat-card">
             <div className="stat-header">
               <div className="icon-wrapper teal"><TrendingUp size={20} /></div>
@@ -251,7 +251,7 @@ const Dashboard = () => {
                 <span className="arrow">↗</span>
               </button>
             </div>
-            
+
             <div className="coverage-status-box">
               <Shield size={20} className="shield-icon" />
               <div className="status-info">

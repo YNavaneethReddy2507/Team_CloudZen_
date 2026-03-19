@@ -33,26 +33,26 @@ const Policy = () => {
             <Shield size={20} />
             <span>My Policy</span>
           </Link>
-          <a href="/" className="nav-item">
+          <Link to="/premium" className="nav-item">
             <TrendingUp size={20} />
             <span>Premium Details</span>
-          </a>
-          <a href="/" className="nav-item">
+          </Link>
+          <Link to="/claims" className="nav-item">
             <FileText size={20} />
             <span>Claims</span>
-          </a>
-          <a href="/" className="nav-item">
+          </Link>
+          <Link to="/payments" className="nav-item">
             <CreditCard size={20} />
             <span>Payments</span>
-          </a>
+          </Link>
           <Link to="/alerts" className="nav-item">
             <Bell size={20} />
             <span>Alerts</span>
           </Link>
-          <a href="/" className="nav-item">
+          <Link to="/profile" className="nav-item">
             <User size={20} />
             <span>Profile</span>
-          </a>
+          </Link>
         </nav>
 
         <a href="/login" className="logout-btn">

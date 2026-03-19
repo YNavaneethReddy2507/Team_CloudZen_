@@ -7,6 +7,10 @@ import RegisterPage from './pages/Auth/RegisterPage';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Policy from './pages/Policy/Policy';
 import Alerts from './pages/Alerts/Alerts';
+import PremiumDetails from './pages/PremiumDetails/PremiumDetails';
+import Claims from './pages/Claims/Claims';
+import Payments from './pages/Payments/Payments';
+import Profile from './pages/Profile/Profile';
 
 function App() {
   return (
@@ -19,6 +23,10 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/policy" element={<Policy />} />
           <Route path="/alerts" element={<Alerts />} />
+          <Route path="/premium" element={<PremiumDetails />} />
+          <Route path="/claims" element={<Claims />} />
+          <Route path="/payments" element={<Payments />} />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
       </div>
     </Router>
