@@ -7,6 +7,8 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip
 } from 'recharts';
 import { Link } from 'react-router-dom';
+import Sidebar from '../../components/Sidebar/Sidebar';
+import { useUser } from '../../context/UserContext';
 import './PremiumDetails.css';
 
 const pieData = [
@@ -50,61 +52,28 @@ const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent
 };
 
 const PremiumDetails = () => {
-  const totalPremium = pieData.reduce((s, d) => s + d.value, 0);
+  const { user } = useUser();
+  const risk = user.riskProfile || { level: 'Medium', score: 60, premium: 75, riskFactors: { weather: 65, safety: 75, pollution: 45, traffic: 55 } };
+
+  const dynamicPieData = [
+    { name: 'Base Premium', value: 40, color: '#1a4f78' },
+    { name: 'Weather Adjustment', value: Math.round(risk.premium * 0.2), color: '#2dd4bf' },
+    { name: 'Zone Risk', value: Math.round(risk.premium * 0.16), color: '#a78bfa' },
+    { name: 'Pollution Factor', value: Math.round(risk.premium * 0.1), color: '#1d4ed8' },
+  ];
+
+  const dynamicRiskFactors = [
+    { label: 'Weather Risk', value: risk.riskFactors.weather, color: '#1a4f78', desc: 'Based on historical rainfall and weather patterns' },
+    { label: 'Zone Safety', value: risk.riskFactors.safety, color: '#2dd4bf', desc: 'Area traffic and disruption history' },
+    { label: 'Pollution Index', value: risk.riskFactors.pollution, color: '#1d4ed8', desc: 'Average AQI levels in your zone' },
+    { label: 'Traffic Disruption', value: risk.riskFactors.traffic, color: '#a78bfa', desc: 'Historical traffic congestion data' },
+  ];
+
+  const totalPremium = user.currentPremium || 75;
 
   return (
     <div className="dashboard-layout">
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <Shield size={24} />
-          <span>DeliveryShield</span>
-        </div>
-
-        <div className="user-profile">
-          <div className="avatar">RK</div>
-          <div className="user-info">
-            <span className="user-name">Rahul Kumar</span>
-            <span className="user-role">Zomato Partner</span>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          <Link to="/dashboard" className="nav-item">
-            <LayoutDashboard size={20} />
-            <span>Dashboard</span>
-          </Link>
-          <Link to="/policy" className="nav-item">
-            <Shield size={20} />
-            <span>My Policy</span>
-          </Link>
-          <Link to="/premium" className="nav-item active">
-            <TrendingUp size={20} />
-            <span>Premium Details</span>
-          </Link>
-          <a href="/" className="nav-item">
-            <FileText size={20} />
-            <span>Claims</span>
-          </a>
-          <a href="/" className="nav-item">
-            <CreditCard size={20} />
-            <span>Payments</span>
-          </a>
-          <Link to="/alerts" className="nav-item">
-            <Bell size={20} />
-            <span>Alerts</span>
-          </Link>
-          <a href="/" className="nav-item">
-            <User size={20} />
-            <span>Profile</span>
-          </a>
-        </nav>
-
-        <a href="/login" className="logout-btn">
-          <LogOut size={20} />
-          <span>Logout</span>
-        </a>
-      </aside>
+      <Sidebar activePage="premium" />
 
       {/* Main Content */}
       <main className="main-content">
@@ -137,7 +106,7 @@ const PremiumDetails = () => {
                 <TrendingUp size={16} />
                 <span className="metric-label">Final Premium</span>
               </div>
-              <div className="metric-value">₹75</div>
+              <div className="metric-value">₹{user.currentPremium || 75}</div>
               <div className="metric-sub">Your weekly payment</div>
             </div>
           </div>
@@ -178,16 +147,18 @@ const PremiumDetails = () => {
                     <stop offset="100%" stopColor="#2dd4bf" />
                   </linearGradient>
                 </defs>
-                <text x="100" y="90" textAnchor="middle" fontSize="28" fontWeight="700" fill="#0f172a">60</text>
+                <text x="100" y="90" textAnchor="middle" fontSize="28" fontWeight="700" fill="#0f172a">{risk.score}</text>
                 <text x="100" y="108" textAnchor="middle" fontSize="11" fill="#64748b">Risk Score</text>
               </svg>
             </div>
             <div className="risk-badge-row">
-              <span className="risk-badge medium">Medium Risk Zone</span>
+              <span className={`risk-badge ${risk.level.toLowerCase().includes('high') ? 'high' : risk.level.toLowerCase().includes('low') ? 'low' : 'medium'}`}>
+                {risk.level} Zone
+              </span>
             </div>
             <div className="risk-location">
               <MapPin size={14} />
-              <span>Mumbai - Andheri East</span>
+              <span>{user.city} - {user.area}</span>
             </div>
           </div>
 

@@ -242,6 +242,34 @@
   font-weight: 500;
 }
 
+.section-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 32px;
+  margin-bottom: 16px;
+}
+
+.download-csv-btn-claims {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #1a4f78;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.download-csv-btn-claims:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
 /* Eligibility Grid */
 .eligibility-grid {
   display: grid;

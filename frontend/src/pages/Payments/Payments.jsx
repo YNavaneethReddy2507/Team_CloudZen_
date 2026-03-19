@@ -1,14 +1,20 @@
 import React from 'react';
-import {
+import { 
   Shield, LayoutDashboard, FileText, AlertTriangle,
   CreditCard, Bell, User, LogOut, TrendingUp,
-  CheckCircle2, Clock, Smartphone, ArrowDownLeft, ArrowUpRight
+  CheckCircle2, Clock, Smartphone, ArrowDownLeft, ArrowUpRight, Building2,
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Tooltip, Legend
 } from 'recharts';
 import { Link } from 'react-router-dom';
+import Sidebar from '../../components/Sidebar/Sidebar';
+import { transactions } from '../../constants/mockData';
+import { useUser } from '../../context/UserContext';
 import './Payments.css';
 
 const cashflowData = [
@@ -20,41 +26,276 @@ const cashflowData = [
   { month: 'Mar', payouts: 1350, premiums: -150 },
 ];
 
-const transactions = [
-  { date: 'March 13, 2026', txn: 'TXN-20260313-8945', type: 'Claim Payout', details: 'CLM-2026-0312', method: 'UPI', amount: '+₹900', isCredit: true },
-  { date: 'March 7, 2026', txn: 'TXN-20260307-4521', type: 'Premium Payment', details: 'Mar 7 – Mar 14', method: 'Card', amount: '₹75', isCredit: false },
-  { date: 'March 6, 2026', txn: 'TXN-20260306-7832', type: 'Claim Payout', details: 'CLM-2026-0305', method: 'UPI', amount: '+₹450', isCredit: true },
-  { date: 'February 28, 2026', txn: 'TXN-20260228-3214', type: 'Premium Payment', details: 'Feb 28 – Mar 6', method: 'UPI', amount: '₹75', isCredit: false },
-  { date: 'February 25, 2026', txn: 'TXN-20260225-9876', type: 'Claim Payout', details: 'CLM-2026-0224', method: 'UPI', amount: '+₹750', isCredit: true },
-  { date: 'February 21, 2026', txn: 'TXN-20260221-5432', type: 'Premium Payment', details: 'Feb 21 – Feb 27', method: 'Card', amount: '₹75', isCredit: false },
-];
+const handleDownloadCSV = () => {
+  const headers = ['Date', 'Transaction ID', 'Type', 'Details', 'Method', 'Amount', 'Status'];
+  const rows = transactions.map(t => [
+    t.date,
+    t.txn,
+    t.type,
+    t.details,
+    t.method,
+    t.amount.replace('₹', ''),
+    'Completed'
+  ]);
+  
+  // Properly handle commas by wrapping in quotes
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(val => `"${val}"`).join(','))
+    .join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'CloudZen_Transactions.csv';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 
 const Payments = () => {
+  const { user, updateUser } = useUser();
+  const methods = user.paymentMethods || [
+    { id: 1, type: 'UPI', name: 'UPI Handle', details: 'rahul@paytm', isPrimary: true, icon: 'upi', expiry: '', cvv: '', startDate: '' },
+    { id: 2, type: 'Card', name: 'Credit Card', details: '124563254896', isPrimary: false, icon: 'card', expiry: '2028-01-09', cvv: '123', startDate: '2022-01-01' },
+  ];
+
+  const [isAdding, setIsAdding] = React.useState(false);
+  const [editingId, setEditingId] = React.useState(null);
+  const [formData, setFormData] = React.useState({ 
+    details: '', 
+    type: 'Card',
+    expiry: '',
+    cvv: '',
+    startDate: ''
+  });
+
+  const handleDeleteMethod = (id) => {
+    if (window.confirm('Are you sure you want to remove this payment method?')) {
+      const updatedMethods = methods.filter(m => m.id !== id);
+      updateUser({ paymentMethods: updatedMethods });
+    }
+  };
+
+  const handleSetPrimary = (id) => {
+    if (editingId) return; 
+    const updatedMethods = methods.map(m => ({ ...m, isPrimary: m.id === id }));
+    updateUser({ paymentMethods: updatedMethods });
+  };
+
+  const handleStartAdd = () => {
+    setFormData({ details: '', type: 'Card', expiry: '', cvv: '', startDate: '' });
+    setIsAdding(true);
+    setEditingId(null);
+  };
+
+  const handleStartEdit = (m) => {
+    setFormData({ 
+      details: m.details, 
+      type: m.type,
+      expiry: m.expiry || '',
+      cvv: m.cvv || '',
+      startDate: m.startDate || ''
+    });
+    setEditingId(m.id);
+    setIsAdding(false);
+  };
+
+  const getDisplayName = (type) => {
+    const maps = { 'Card': 'Credit Card', 'Debit': 'Debit Card', 'Bank': 'Net Banking', 'UPI': 'UPI Handle' };
+    return maps[type] || type;
+  };
+
+  const formatDetails = (m) => {
+    if (m.type === 'UPI') return m.details;
+    // For 12-digit cards as per user request: mask first 8, show last 4
+    const clean = m.details.replace(/\s/g, '');
+    if (clean.length > 4) {
+      return `•••• •••• ${clean.slice(-4)}`;
+    }
+    return m.details;
+  };
+
+  const handleSave = () => {
+    if (formData.type === 'UPI') {
+      if (!formData.details || !formData.details.includes('@')) {
+        alert('Please enter a valid UPI ID (e.g. name@bank)');
+        return;
+      }
+    } else {
+      // Basic 12-digit check for card number
+      if (!formData.details || formData.details.replace(/\D/g, '').length !== 12) {
+        alert('Please enter a valid 12-digit card number');
+        return;
+      }
+
+      if (!formData.expiry || !formData.cvv) {
+        alert('Please fill Expiry and CVV');
+        return;
+      }
+    }
+
+    const name = formData.type === 'UPI' ? 'UPI Handle' : (formData.type === 'Debit' ? 'Debit Card' : 'Credit Card');
+    let updatedMethods;
+
+    if (editingId) {
+      updatedMethods = methods.map(m => 
+        m.id === editingId ? { 
+          ...m, 
+          name, 
+          details: formData.details, 
+          type: formData.type,
+          expiry: formData.type === 'UPI' ? '' : formData.expiry,
+          cvv: formData.type === 'UPI' ? '' : formData.cvv,
+          startDate: formData.type === 'UPI' ? '' : formData.startDate
+        } : m
+      );
+    } else {
+      const newMethod = {
+        id: Date.now(),
+        type: formData.type,
+        name,
+        details: formData.details,
+        expiry: formData.type === 'UPI' ? '' : formData.expiry,
+        cvv: formData.type === 'UPI' ? '' : formData.cvv,
+        startDate: formData.type === 'UPI' ? '' : formData.startDate,
+        isPrimary: false,
+        icon: formData.type === 'UPI' ? 'upi' : 'card'
+      };
+      updatedMethods = [...methods, newMethod];
+    }
+    
+    updateUser({ paymentMethods: updatedMethods });
+    setIsAdding(false);
+    setEditingId(null);
+  };
+
+  const handleCancel = () => {
+    setIsAdding(false);
+    setEditingId(null);
+  };
+
+  const [activePicker, setActivePicker] = React.useState(null);
+  const pickerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+        setActivePicker(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const CustomDatePicker = ({ label, value, onSelect, pickerKey }) => {
+    const [viewDate, setViewDate] = React.useState(new Date(value || Date.now()));
+    const [showYearPicker, setShowYearPicker] = React.useState(false);
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay();
+    const adjustedFirstDay = (firstDay + 6) % 7; 
+    
+    const days = [];
+    for (let i = 0; i < adjustedFirstDay; i++) days.push(null);
+    for (let i = 1; i <= daysInMonth; i++) days.push(i);
+
+    const isSelected = (d) => {
+      if (!d || !value) return false;
+      const sel = new Date(value);
+      return sel.getDate() === d && sel.getMonth() === month && sel.getFullYear() === year;
+    };
+
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = currentYear - 10; i <= currentYear + 20; i++) years.push(i);
+
+    return (
+      <div className="input-with-label" style={{ position: 'relative' }} ref={activePicker === pickerKey ? pickerRef : null}>
+        <span className="small-label">{label}</span>
+        <div 
+          className={`date-trigger-input ${activePicker === pickerKey ? 'active' : ''}`}
+          onClick={() => {
+            setActivePicker(activePicker === pickerKey ? null : pickerKey);
+            setShowYearPicker(false);
+          }}
+        >
+          {value || 'Select Date'}
+          <CalendarIcon size={14} className="date-input-icon" />
+        </div>
+
+        {activePicker === pickerKey && (
+          <div className="calendar-popup">
+            <div className="calendar-header">
+              <button className="calendar-nav-btn" onClick={() => {
+                if (showYearPicker) return;
+                setViewDate(new Date(year, month - 1, 1));
+              }} disabled={showYearPicker}><ChevronLeft size={16} /></button>
+              
+              <div className="calendar-title-group" onClick={() => setShowYearPicker(!showYearPicker)}>
+                <span className="calendar-title">{months[month]} <span className="highlight-year">{year}</span></span>
+              </div>
+
+              <button className="calendar-nav-btn" onClick={() => {
+                if (showYearPicker) return;
+                setViewDate(new Date(year, month + 1, 1));
+              }} disabled={showYearPicker}><ChevronRight size={16} /></button>
+            </div>
+
+            {showYearPicker ? (
+              <div className="calendar-year-grid">
+                {years.map(y => (
+                  <div 
+                    key={y} 
+                    className={`calendar-year-cell ${y === year ? 'selected' : ''}`}
+                    onClick={() => {
+                      setViewDate(new Date(y, month, 1));
+                      setShowYearPicker(false);
+                    }}
+                  >
+                    {y}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="calendar-days-row">
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
+                    <div key={d} className="calendar-day-label">{d}</div>
+                  ))}
+                </div>
+                <div className="calendar-days-grid">
+                  {days.map((d, i) => (
+                    <div 
+                      key={i} 
+                      className={`calendar-day-cell ${!d ? 'empty' : ''} ${isSelected(d) ? 'selected' : ''}`}
+                      onClick={() => {
+                        if (d) {
+                          onSelect(`${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+                          setActivePicker(null);
+                        }
+                      }}
+                    >
+                      {d}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="dashboard-layout">
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <Shield size={24} /><span>DeliveryShield</span>
-        </div>
-        <div className="user-profile">
-          <div className="avatar">RK</div>
-          <div className="user-info">
-            <span className="user-name">Rahul Kumar</span>
-            <span className="user-role">Zomato Partner</span>
-          </div>
-        </div>
-        <nav className="sidebar-nav">
-          <Link to="/dashboard" className="nav-item"><LayoutDashboard size={20} /><span>Dashboard</span></Link>
-          <Link to="/policy" className="nav-item"><Shield size={20} /><span>My Policy</span></Link>
-          <Link to="/premium" className="nav-item"><TrendingUp size={20} /><span>Premium Details</span></Link>
-          <Link to="/claims" className="nav-item"><FileText size={20} /><span>Claims</span></Link>
-          <Link to="/payments" className="nav-item active"><CreditCard size={20} /><span>Payments</span></Link>
-          <Link to="/alerts" className="nav-item"><Bell size={20} /><span>Alerts</span></Link>
-          <a href="/" className="nav-item"><User size={20} /><span>Profile</span></a>
-        </nav>
-        <a href="/login" className="logout-btn"><LogOut size={20} /><span>Logout</span></a>
-      </aside>
+      <Sidebar activePage="payments" />
 
       {/* Main */}
       <main className="main-content">
@@ -137,23 +378,171 @@ const Payments = () => {
           {/* Payment Methods */}
           <div className="pay-card">
             <h3 className="pay-section-title">Payment Methods</h3>
-            <div className="method-item primary-method">
-              <Smartphone size={18} className="method-icon" />
-              <div className="method-info">
-                <div className="method-name">UPI</div>
-                <div className="method-sub">rahul@paytm</div>
+            <div className="methods-list">
+              {methods.map((m) => (
+                editingId === m.id ? (
+                  <div key={m.id} className="method-item editing full-form">
+                    <div className="method-form-inline detailed">
+                      <div className="card-type-toggle">
+                        <button className={formData.type === 'Debit' ? 'active' : ''} onClick={() => setFormData({...formData, type: 'Debit'})}>Debit</button>
+                        <button className={formData.type === 'Card' ? 'active' : ''} onClick={() => setFormData({...formData, type: 'Card'})}>Credit</button>
+                        <button className={formData.type === 'UPI' ? 'active' : ''} onClick={() => setFormData({...formData, type: 'UPI'})}>UPI</button>
+                      </div>
+                      
+                      {formData.type === 'UPI' ? (
+                        <div className="input-with-label" style={{ flex: 1 }}>
+                          <span className="small-label">UPI ID</span>
+                          <input 
+                            type="text" 
+                            value={formData.details} 
+                            onChange={e => setFormData({...formData, details: e.target.value})}
+                            placeholder="username@bank"
+                            autoFocus
+                          />
+                        </div>
+                      ) : (
+                        <div className="card-input-group">
+                          <div className="input-with-label">
+                            <span className="small-label">Card Number (12 Digits)</span>
+                            <input 
+                              type="text" 
+                              value={formData.details} 
+                              onChange={e => {
+                                const val = e.target.value.replace(/\D/g, '');
+                                if (val.length <= 12) setFormData({...formData, details: val});
+                              }}
+                              placeholder="0000 0000 0000"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="triple-grid">
+                            <CustomDatePicker 
+                              label="Start Date" 
+                              value={formData.startDate} 
+                              onSelect={val => setFormData({...formData, startDate: val})} 
+                              pickerKey="edit-start"
+                            />
+                            <CustomDatePicker 
+                              label="Expiry Date" 
+                              value={formData.expiry} 
+                              onSelect={val => setFormData({...formData, expiry: val})} 
+                              pickerKey="edit-expiry"
+                            />
+                            <div className="input-with-label">
+                              <span className="small-label">CVV</span>
+                              <input type="password" value={formData.cvv} onChange={e => setFormData({...formData, cvv: e.target.value})} placeholder="CVV" maxLength="3" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div className="form-actions-detailed">
+                        <button className="save-btn" onClick={handleSave}>Update Wallet</button>
+                        <button className="remove-btn-inline" onClick={() => handleDeleteMethod(m.id)}>Remove</button>
+                        <button className="cancel-btn" onClick={handleCancel}>Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div 
+                    key={m.id} 
+                    className={`method-item ${m.isPrimary ? 'primary' : ''}`}
+                    onClick={() => handleSetPrimary(m.id)}
+                  >
+                    <div className={`method-icon-container ${m.type === 'UPI' ? 'upi' : ''}`}>
+                      {m.type === 'UPI' ? <Smartphone size={20} /> : <CreditCard size={20} />}
+                    </div>
+                    <div className="method-info">
+                      <div className="method-name">{m.name}</div>
+                      <div className="method-sub">
+                        {formatDetails(m)} 
+                        {m.expiry && <span className="card-expiry-tag">Exp: {m.expiry}</span>}
+                      </div>
+                    </div>
+                    <div className="method-actions">
+                      <button 
+                        className="edit-btn" 
+                        onClick={(e) => { e.stopPropagation(); handleStartEdit(m); }}
+                      >
+                        Edit
+                      </button>
+                      {!m.isPrimary && (
+                        <button 
+                          className="remove-btn" 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteMethod(m.id); }}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              ))}
+          </div>
+
+            {isAdding ? (
+              <div className="method-item adding full-form">
+                <div className="method-form-inline detailed">
+                  <div className="card-type-toggle">
+                    <button className={formData.type === 'Debit' ? 'active' : ''} onClick={() => setFormData({...formData, type: 'Debit'})}>Debit</button>
+                    <button className={formData.type === 'Card' ? 'active' : ''} onClick={() => setFormData({...formData, type: 'Card'})}>Credit</button>
+                    <button className={formData.type === 'UPI' ? 'active' : ''} onClick={() => setFormData({...formData, type: 'UPI'})}>UPI</button>
+                  </div>
+
+                  {formData.type === 'UPI' ? (
+                    <div className="input-with-label" style={{ flex: 1 }}>
+                      <span className="small-label">UPI ID</span>
+                      <input 
+                        type="text" 
+                        value={formData.details} 
+                        onChange={e => setFormData({...formData, details: e.target.value})}
+                        placeholder="username@bank"
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <div className="card-input-group">
+                      <div className="input-with-label">
+                        <span className="small-label">Card Number (12 Digits)</span>
+                        <input 
+                          type="text" 
+                          value={formData.details} 
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            if (val.length <= 12) setFormData({...formData, details: val});
+                          }}
+                          placeholder="0000 0000 0000"
+                          autoFocus
+                        />
+                      </div>
+                    <div className="triple-grid">
+                      <CustomDatePicker 
+                        label="Start Date" 
+                        value={formData.startDate} 
+                        onSelect={val => setFormData({...formData, startDate: val})} 
+                        pickerKey="add-start"
+                      />
+                      <CustomDatePicker 
+                        label="Expiry Date" 
+                        value={formData.expiry} 
+                        onSelect={val => setFormData({...formData, expiry: val})} 
+                        pickerKey="add-expiry"
+                      />
+                      <div className="input-with-label">
+                        <span className="small-label">CVV</span>
+                        <input type="password" value={formData.cvv} onChange={e => setFormData({...formData, cvv: e.target.value})} placeholder="CVV" maxLength="3" />
+                      </div>
+                    </div>
+                    </div>
+                  )}
+                  <div className="form-actions-detailed">
+                    <button className="save-btn" onClick={handleSave}>Add Method</button>
+                    <button className="cancel-btn" onClick={handleCancel}>Cancel</button>
+                  </div>
+                </div>
               </div>
-              <span className="method-badge primary">Primary</span>
-            </div>
-            <div className="method-item">
-              <CreditCard size={18} className="method-icon" />
-              <div className="method-info">
-                <div className="method-name">Credit Card</div>
-                <div className="method-sub">•••• •••• •••• 4532</div>
-              </div>
-              <button className="method-edit">Edit</button>
-            </div>
-            <button className="add-method-btn">+ Add Payment Method</button>
+            ) : (
+              <button className="add-method-btn" onClick={handleStartAdd}>+ Add Payment Method</button>
+            )}
           </div>
 
           {/* Instant Payout Status */}
@@ -180,7 +569,12 @@ const Payments = () => {
 
         {/* Transaction History */}
         <div className="pay-card" style={{ marginBottom: 24 }}>
-          <h3 className="pay-section-title">Transaction History</h3>
+          <div className="pay-card-header flex-header">
+            <h3 className="pay-section-title">Transaction History</h3>
+            <button className="download-csv-btn" onClick={handleDownloadCSV}>
+              <ArrowDownLeft size={14} /> Download CSV
+            </button>
+          </div>
           <div className="txn-table-wrapper">
             <table className="txn-table">
               <thead>

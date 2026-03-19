@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { Link } from 'react-router-dom';
+import Sidebar from '../../components/Sidebar/Sidebar';
+import { useUser } from '../../context/UserContext';
 import './Dashboard.css';
 
 const earningsData = [
@@ -27,64 +29,16 @@ const claimsData = [
 ];
 
 const Dashboard = () => {
+  const { user, weatherData } = useUser();
+
   return (
     <div className="dashboard-layout">
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <Shield size={24} />
-          <span>DeliveryShield</span>
-        </div>
-
-        <div className="user-profile">
-          <div className="avatar">RK</div>
-          <div className="user-info">
-            <span className="user-name">Rahul Kumar</span>
-            <span className="user-role">Zomato Partner</span>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          <Link to="/dashboard" className="nav-item active">
-            <LayoutDashboard size={20} />
-            <span>Dashboard</span>
-          </Link>
-          <Link to="/policy" className="nav-item">
-            <Shield size={20} />
-            <span>My Policy</span>
-          </Link>
-          <Link to="/premium" className="nav-item">
-            <TrendingUp size={20} />
-            <span>Premium Details</span>
-          </Link>
-          <Link to="/claims" className="nav-item">
-            <FileText size={20} />
-            <span>Claims</span>
-          </Link>
-          <Link to="/payments" className="nav-item">
-            <CreditCard size={20} />
-            <span>Payments</span>
-          </Link>
-          <Link to="/alerts" className="nav-item">
-            <Bell size={20} />
-            <span>Alerts</span>
-          </Link>
-          <Link to="/profile" className="nav-item">
-            <User size={20} />
-            <span>Profile</span>
-          </Link>
-        </nav>
-
-        <a href="/login" className="logout-btn">
-          <LogOut size={20} />
-          <span>Logout</span>
-        </a>
-      </aside>
+      <Sidebar activePage="dashboard" />
 
       {/* Main Content */}
       <main className="main-content">
         <header className="main-header">
-          <h1>Welcome back, Rahul!</h1>
+          <h1>Welcome back, {user.firstName}!</h1>
           <p>Here's your insurance overview for this week</p>
         </header>
 
@@ -105,9 +59,19 @@ const Dashboard = () => {
               <div className="icon-wrapper blue"><Shield size={20} /></div>
               <span className="badge green">Active</span>
             </div>
-            <h2>₹3,000</h2>
+            <h2>₹{(user.currentPremium || 75) * 40}</h2>
             <p>Active Coverage</p>
             <span className="trend green">↗ Valid until Mar 21</span>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-header">
+              <div className="icon-wrapper blue"><CloudRain size={20} /></div>
+              <span className="badge teal">Live</span>
+            </div>
+            <h2>{weatherData.loading ? '--' : `${weatherData.temp}°C`}</h2>
+            <p>{weatherData.loading ? 'Fetching...' : weatherData.condition}</p>
+            <span className="trend blue">Current Temp in {user.area}</span>
           </div>
 
           <div className="stat-card">
@@ -135,9 +99,11 @@ const Dashboard = () => {
               <div className="icon-wrapper blue"><CloudRain size={20} /></div>
               <span className="period">Risk level</span>
             </div>
-            <h2>Medium</h2>
-            <p>Weather Risk Today</p>
-            <span className="trend orange">↗ 60% rain probability</span>
+            <h2>{user.riskProfile?.level || 'Medium'}</h2>
+            <p>Risk in {user.city}</p>
+            <span className={`trend ${user.riskProfile?.level.includes('High') ? 'orange' : 'green'}`}>
+              {user.riskProfile?.score}% risk score
+            </span>
           </div>
         </div>
 

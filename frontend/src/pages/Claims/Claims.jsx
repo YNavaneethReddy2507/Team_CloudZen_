@@ -5,70 +5,11 @@ import {
   CloudRain, Wind, Clock, CheckCircle2, XCircle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import Sidebar from '../../components/Sidebar/Sidebar';
+import { useUser } from '../../context/UserContext';
+import { claimsData } from '../../constants/mockData';
 import './Claims.css';
 
-const claimsData = [
-  {
-    id: 'CLM-2026-0312',
-    type: 'Heavy Rainfall',
-    date: 'March 12, 2026',
-    amount: 900,
-    status: 'Paid',
-    duration: '6 hours',
-    triggerTime: '2:00 PM - 8:00 PM',
-    description: 'Rainfall exceeded 65mm/hour threshold. Automatic claim triggered.',
-    paidOn: 'Paid on March 13, 2026 9:15 AM',
-    icon: 'rain',
-  },
-  {
-    id: 'CLM-2026-0310',
-    type: 'Pollution Alert',
-    date: 'March 10, 2026',
-    amount: 450,
-    status: 'Processing',
-    duration: '4 hours',
-    triggerTime: '10:00 AM - 2:00 PM',
-    description: 'AQI exceeded 350 (hazardous level). Claim under verification.',
-    paidOn: null,
-    icon: 'wind',
-  },
-  {
-    id: 'CLM-2026-0305',
-    type: 'Heavy Rainfall',
-    date: 'March 5, 2026',
-    amount: 450,
-    status: 'Paid',
-    duration: '3 hours',
-    triggerTime: '4:00 PM - 7:00 PM',
-    description: 'Rainfall exceeded threshold. Payout processed successfully.',
-    paidOn: 'Paid on March 6, 2026 11:30 AM',
-    icon: 'rain',
-  },
-  {
-    id: 'CLM-2026-0228',
-    type: 'Traffic Disruption',
-    date: 'February 28, 2026',
-    amount: 0,
-    status: 'Rejected',
-    duration: '2 hours',
-    triggerTime: '6:00 PM - 8:00 PM',
-    description: 'Disruption duration below minimum threshold of 3 hours.',
-    paidOn: null,
-    icon: 'alert',
-  },
-  {
-    id: 'CLM-2026-0224',
-    type: 'Heavy Rainfall',
-    date: 'February 24, 2026',
-    amount: 750,
-    status: 'Paid',
-    duration: '5 hours',
-    triggerTime: '1:00 PM - 6:00 PM',
-    description: 'Severe weather event. Automatic payout completed.',
-    paidOn: 'Paid on February 25, 2026 8:45 AM',
-    icon: 'rain',
-  },
-];
 
 const ClaimIcon = ({ type }) => {
   if (type === 'rain') return <div className="claim-type-icon rain"><CloudRain size={22} /></div>;
@@ -81,52 +22,35 @@ const StatusBadge = ({ status }) => {
   return <span className={`claim-status-badge ${cls}`}>{status}</span>;
 };
 
+const handleDownloadCSV = () => {
+  const headers = ['Claim ID', 'Type', 'Date', 'Amount (INR)', 'Status', 'Duration', 'Trigger Time'];
+  const rows = claimsData.map(c => [
+    c.id,
+    c.type,
+    c.date,
+    c.amount,
+    c.status,
+    c.duration,
+    c.triggerTime
+  ]);
+  
+  const csvContent = [headers, ...rows].map(e => e.join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', 'CloudZen_Claims_History.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 const Claims = () => {
+  const { user } = useUser();
+
   return (
     <div className="dashboard-layout">
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <Shield size={24} />
-          <span>DeliveryShield</span>
-        </div>
-
-        <div className="user-profile">
-          <div className="avatar">RK</div>
-          <div className="user-info">
-            <span className="user-name">Rahul Kumar</span>
-            <span className="user-role">Zomato Partner</span>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          <Link to="/dashboard" className="nav-item">
-            <LayoutDashboard size={20} /><span>Dashboard</span>
-          </Link>
-          <Link to="/policy" className="nav-item">
-            <Shield size={20} /><span>My Policy</span>
-          </Link>
-          <Link to="/premium" className="nav-item">
-            <TrendingUp size={20} /><span>Premium Details</span>
-          </Link>
-          <Link to="/claims" className="nav-item active">
-            <FileText size={20} /><span>Claims</span>
-          </Link>
-          <a href="/" className="nav-item">
-            <CreditCard size={20} /><span>Payments</span>
-          </a>
-          <Link to="/alerts" className="nav-item">
-            <Bell size={20} /><span>Alerts</span>
-          </Link>
-          <a href="/" className="nav-item">
-            <User size={20} /><span>Profile</span>
-          </a>
-        </nav>
-
-        <a href="/login" className="logout-btn">
-          <LogOut size={20} /><span>Logout</span>
-        </a>
-      </aside>
+      <Sidebar activePage="claims" />
 
       {/* Main Content */}
       <main className="main-content">
@@ -142,7 +66,7 @@ const Claims = () => {
               <div className="icon-wrapper blue"><FileText size={20} /></div>
               <span className="period">Total Claims</span>
             </div>
-            <h2>12</h2>
+            <h2>{user.totalClaims}</h2>
             <span className="trend green">↗ +3 this month</span>
           </div>
           <div className="stat-card">
@@ -193,7 +117,12 @@ const Claims = () => {
         </div>
 
         {/* All Claims */}
-        <h3 className="section-heading">All Claims</h3>
+        <div className="section-header-flex">
+          <h3 className="section-heading">All Claims</h3>
+          <button className="download-csv-btn-claims" onClick={handleDownloadCSV}>
+            <FileText size={14} /> Download CSV
+          </button>
+        </div>
         <div className="claims-list-container">
           {claimsData.map((claim, i) => (
             <div key={i} className="claim-row">

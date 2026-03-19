@@ -4,62 +4,13 @@ import {
   CreditCard, Bell, User, LogOut, TrendingUp, CheckCircle2, Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import Sidebar from '../../components/Sidebar/Sidebar';
 import './Policy.css';
 
 const Policy = () => {
   return (
     <div className="policy-layout dashboard-layout">
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <Shield size={24} />
-          <span>DeliveryShield</span>
-        </div>
-        
-        <div className="user-profile">
-          <div className="avatar">RK</div>
-          <div className="user-info">
-            <span className="user-name">Rahul Kumar</span>
-            <span className="user-role">Zomato Partner</span>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          <Link to="/dashboard" className="nav-item">
-            <LayoutDashboard size={20} />
-            <span>Dashboard</span>
-          </Link>
-          <Link to="/policy" className="nav-item active">
-            <Shield size={20} />
-            <span>My Policy</span>
-          </Link>
-          <Link to="/premium" className="nav-item">
-            <TrendingUp size={20} />
-            <span>Premium Details</span>
-          </Link>
-          <Link to="/claims" className="nav-item">
-            <FileText size={20} />
-            <span>Claims</span>
-          </Link>
-          <Link to="/payments" className="nav-item">
-            <CreditCard size={20} />
-            <span>Payments</span>
-          </Link>
-          <Link to="/alerts" className="nav-item">
-            <Bell size={20} />
-            <span>Alerts</span>
-          </Link>
-          <Link to="/profile" className="nav-item">
-            <User size={20} />
-            <span>Profile</span>
-          </Link>
-        </nav>
-
-        <a href="/login" className="logout-btn">
-          <LogOut size={20} />
-          <span>Logout</span>
-        </a>
-      </aside>
+      <Sidebar activePage="policy" />
 
       {/* Main Content */}
       <main className="main-content">

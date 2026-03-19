@@ -3,9 +3,12 @@ import {
   Shield, LayoutDashboard, FileText, AlertTriangle,
   CreditCard, Bell, User, LogOut, TrendingUp,
   Mail, Phone, MapPin, Settings, Lock,
-  Camera, Briefcase, Clock
+  Camera, Briefcase, Clock, Save, X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import Sidebar from '../../components/Sidebar/Sidebar';
+import { useUser } from '../../context/UserContext';
+import { transactions, claimsData } from '../../constants/mockData';
 import './Profile.css';
 
 const Toggle = ({ defaultOn = false, color = '#1a4f78' }) => {
@@ -15,7 +18,6 @@ const Toggle = ({ defaultOn = false, color = '#1a4f78' }) => {
       className={`prof-toggle ${on ? 'on' : ''}`}
       style={on ? { background: color } : {}}
       onClick={() => setOn(!on)}
-      aria-label="toggle"
     >
       <span className="prof-toggle-knob" />
     </button>
@@ -23,29 +25,192 @@ const Toggle = ({ defaultOn = false, color = '#1a4f78' }) => {
 };
 
 const Profile = () => {
+  const { user, updateUser } = useUser();
+
+  // Personal Info temp state
+  const [isEditingPersonal, setIsEditingPersonal] = useState(false);
+  const [tempPersonal, setTempPersonal] = useState({
+    fullName: user.fullName,
+    email: user.email,
+    phone: user.phone,
+    area: user.area,
+    city: user.city,
+  });
+
+  // Work Info temp state
+  const [isEditingWork, setIsEditingWork] = useState(false);
+  const [tempWork, setTempWork] = useState({
+    platform: user.platform,
+    partnerId: user.partnerId,
+    workingHours: user.workingHours,
+    primaryZones: user.primaryZones.join(', '),
+  });
+
+  // Password temp state
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    current: '',
+    new: '',
+    confirm: '',
+  });
+
+  // Handlers
+  const handleEditPersonal = () => {
+    setTempPersonal({
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      area: user.area,
+      city: user.city,
+    });
+    setIsEditingPersonal(true);
+  };
+
+  const handleSavePersonal = () => {
+    updateUser({ ...tempPersonal });
+    setIsEditingPersonal(false);
+  };
+
+  const handleCancelPersonal = () => {
+    setIsEditingPersonal(false);
+  };
+
+  const handleEditWork = () => {
+    setTempWork({
+      platform: user.platform,
+      partnerId: user.partnerId,
+      workingHours: user.workingHours,
+      primaryZones: user.primaryZones.join(', '),
+    });
+    setIsEditingWork(true);
+  };
+
+  const handleSaveWork = () => {
+    updateUser({
+      ...tempWork,
+      primaryZones: tempWork.primaryZones.split(',').map(s => s.trim())
+    });
+    setIsEditingWork(false);
+  };
+
+  const handleCancelWork = () => {
+    setIsEditingWork(false);
+  };
+
+  const handleSavePassword = () => {
+    if (!passwordForm.current || !passwordForm.new || !passwordForm.confirm) {
+      alert('Please fill in all fields');
+      return;
+    }
+    if (passwordForm.new !== passwordForm.confirm) {
+      alert('New passwords do not match');
+      return;
+    }
+    // Simulate API call
+    alert('Password updated successfully!');
+    setIsChangingPassword(false);
+    setPasswordForm({ current: '', new: '', confirm: '' });
+  };
+
+  const handleExportData = () => {
+    // 1. Profile Section
+    const profileHeaders = ['SECTION: PROFILE', '', '', '', '', '', '', '', '', '', '', '', '', ''];
+    const profileColumns = [
+      'Full Name', 'Email', 'Phone', 'City', 'Area', 'Platform', 
+      'Partner ID', 'Working Hours', 'Status', 'Risk Score', 
+      'Risk Level', 'Monthly Premium', 'Total Claims', 'Export Date'
+    ];
+    const profileRow = [
+      user.fullName, user.email, user.phone, user.city, user.area, 
+      user.platform, user.partnerId, user.workingHours, user.status, 
+      user.riskProfile?.score, user.riskProfile?.level, user.riskProfile?.premium, 
+      user.totalClaims, new Date().toISOString()
+    ].map(val => `"${val}"`);
+
+    // 2. Payments Section
+    const paymentHeaders = ['', '', '', '', '', '', ''];
+    const paymentTitle = ['SECTION: PAYMENT TRANSACTIONS', '', '', '', '', '', ''];
+    const paymentColumns = ['Date', 'Transaction ID', 'Type', 'Details', 'Method', 'Amount', 'Status'];
+    const paymentRows = transactions.map(t => [
+      t.date, t.txn, t.type, t.details, t.method, t.amount.replace('₹', ''), 'Completed'
+    ].map(val => `"${val}"`));
+
+    // 3. Claims Section
+    const claimHeaders = ['', '', '', '', '', '', ''];
+    const claimTitle = ['SECTION: CLAIMS HISTORY', '', '', '', '', '', ''];
+    const claimColumns = ['Claim ID', 'Type', 'Date', 'Amount (INR)', 'Status', 'Duration', 'Trigger Time'];
+    const claimRows = claimsData.map(c => [
+      c.id, c.type, c.date, c.amount, c.status, c.duration, c.triggerTime
+    ].map(val => `"${val}"`));
+
+    // 4. Premium Details Section (Risk Factors)
+    const riskTitle = ['SECTION: PREMIUM RISK FACTORS', '', ''];
+    const riskColumns = ['Factor Name', 'Impact Level', 'Description'];
+    let riskRows = [];
+    const factors = user.riskProfile?.riskFactors;
+
+    if (factors) {
+      if (Array.isArray(factors)) {
+        riskRows = factors.map(r => [
+          r.name, r.impact || r.score || 'N/A', 
+          r.name === 'Weather' ? 'Based on real-time Met Dept data' : r.name === 'Pollution' ? 'Based on live AQI data' : 'Based on local safety trends'
+        ].map(val => `"${val}"`));
+      } else if (typeof factors === 'object') {
+        riskRows = Object.entries(factors).map(([key, val]) => [
+          key.charAt(0).toUpperCase() + key.slice(1),
+          val > 70 ? 'High' : val > 40 ? 'Medium' : 'Low',
+          `Score: ${val} - Based on live environmental metrics`
+        ].map(v => `"${v}"`));
+      }
+    }
+
+    // 5. Subscription Details
+    const subTitle = ['SECTION: SUBSCRIPTION DETAILS', '', ''];
+    const subColumns = ['Policy Status', 'Monthly Premium', 'Next Due Date', 'Payment Method'];
+    const subRow = [
+      user.status,
+      `₹${user.riskProfile?.premium}`,
+      'March 21, 2026', // Matching Payments.jsx
+      'UPI (rahul@paytm)' // Matching Payments.jsx
+    ].map(val => `"${val}"`);
+
+    // Combine all
+    const csvContent = [
+      profileHeaders.join(','),
+      profileColumns.join(','),
+      profileRow.join(','),
+      '',
+      subTitle.join(','),
+      subColumns.join(','),
+      subRow.join(','),
+      '',
+      paymentTitle.join(','),
+      paymentColumns.join(','),
+      ...paymentRows.map(r => r.join(',')),
+      '',
+      claimTitle.join(','),
+      claimColumns.join(','),
+      ...claimRows.map(r => r.join(',')),
+      '',
+      riskTitle.join(','),
+      riskColumns.join(','),
+      ...riskRows.map(r => r.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `CloudZen_Master_Export_${user.fullName.replace(/\s+/g, '_')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="dashboard-layout">
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div className="sidebar-brand"><Shield size={24} /><span>DeliveryShield</span></div>
-        <div className="user-profile">
-          <div className="avatar">RK</div>
-          <div className="user-info">
-            <span className="user-name">Rahul Kumar</span>
-            <span className="user-role">Zomato Partner</span>
-          </div>
-        </div>
-        <nav className="sidebar-nav">
-          <Link to="/dashboard" className="nav-item"><LayoutDashboard size={20} /><span>Dashboard</span></Link>
-          <Link to="/policy" className="nav-item"><Shield size={20} /><span>My Policy</span></Link>
-          <Link to="/premium" className="nav-item"><TrendingUp size={20} /><span>Premium Details</span></Link>
-          <Link to="/claims" className="nav-item"><FileText size={20} /><span>Claims</span></Link>
-          <Link to="/payments" className="nav-item"><CreditCard size={20} /><span>Payments</span></Link>
-          <Link to="/alerts" className="nav-item"><Bell size={20} /><span>Alerts</span></Link>
-          <Link to="/profile" className="nav-item active"><User size={20} /><span>Profile</span></Link>
-        </nav>
-        <a href="/login" className="logout-btn"><LogOut size={20} /><span>Logout</span></a>
-      </aside>
+      <Sidebar activePage="profile" />
 
       {/* Main */}
       <main className="main-content">
@@ -57,24 +222,24 @@ const Profile = () => {
         {/* Profile Banner */}
         <div className="profile-banner">
           <div className="profile-avatar-wrap">
-            <div className="profile-avatar-lg">RK</div>
+            <div className="profile-avatar-lg">{user.fullName.split(' ').map(n => n[0]).join('')}</div>
             <button className="avatar-camera-btn"><Camera size={14} /></button>
           </div>
           <div className="profile-banner-info">
-            <div className="profile-banner-name">Rahul Kumar</div>
-            <div className="profile-banner-sub">Zomato Delivery Partner • Mumbai</div>
+            <div className="profile-banner-name">{user.fullName}</div>
+            <div className="profile-banner-sub">{user.role} • {user.city}</div>
             <div className="profile-banner-stats">
               <div className="banner-stat">
                 <div className="bs-label">Member Since</div>
-                <div className="bs-value">October 2025</div>
+                <div className="bs-value">{user.memberSince}</div>
               </div>
               <div className="banner-stat">
                 <div className="bs-label">Coverage Status</div>
-                <div className="bs-value">Active</div>
+                <div className="bs-value">{user.status}</div>
               </div>
               <div className="banner-stat">
                 <div className="bs-label">Total Claims</div>
-                <div className="bs-value">12</div>
+                <div className="bs-value">{user.totalClaims}</div>
               </div>
             </div>
           </div>
@@ -84,24 +249,77 @@ const Profile = () => {
         <div className="prof-section-card">
           <div className="prof-section-header">
             <h3>Personal Information</h3>
-            <button className="prof-edit-btn">Edit</button>
+            {isEditingPersonal ? (
+              <div className="edit-actions">
+                <button className="prof-save-btn" onClick={handleSavePersonal}><Save size={14} /> Save</button>
+                <button className="prof-cancel-btn" onClick={handleCancelPersonal}><X size={14} /> Cancel</button>
+              </div>
+            ) : (
+              <button className="prof-edit-btn" onClick={handleEditPersonal}>Edit</button>
+            )}
           </div>
           <div className="prof-fields-grid">
             <div className="prof-field">
               <div className="pf-label">Full Name</div>
-              <div className="pf-value"><User size={15} /> Rahul Kumar</div>
+              {isEditingPersonal ? (
+                <input
+                  type="text"
+                  className="pf-input"
+                  value={tempPersonal.fullName}
+                  onChange={(e) => setTempPersonal({ ...tempPersonal, fullName: e.target.value })}
+                />
+              ) : (
+                <div className="pf-value"><User size={15} /> {user.fullName}</div>
+              )}
             </div>
             <div className="prof-field">
               <div className="pf-label">Email Address</div>
-              <div className="pf-value"><Mail size={15} /> rahul.kumar@email.com</div>
+              {isEditingPersonal ? (
+                <input
+                  type="email"
+                  className="pf-input"
+                  value={tempPersonal.email}
+                  onChange={(e) => setTempPersonal({ ...tempPersonal, email: e.target.value })}
+                />
+              ) : (
+                <div className="pf-value"><Mail size={15} /> {user.email}</div>
+              )}
             </div>
             <div className="prof-field">
               <div className="pf-label">Phone Number</div>
-              <div className="pf-value"><Phone size={15} /> +91 98765 43210</div>
+              {isEditingPersonal ? (
+                <input
+                  type="text"
+                  className="pf-input"
+                  value={tempPersonal.phone}
+                  onChange={(e) => setTempPersonal({ ...tempPersonal, phone: e.target.value })}
+                />
+              ) : (
+                <div className="pf-value"><Phone size={15} /> {user.phone}</div>
+              )}
             </div>
             <div className="prof-field">
-              <div className="pf-label">Operating City</div>
-              <div className="pf-value"><MapPin size={15} /> Mumbai – Andheri East</div>
+              <div className="pf-label">Operating City & Area</div>
+              {isEditingPersonal ? (
+                <div className="dual-input">
+                  <input
+                    type="text"
+                    className="pf-input"
+                    value={tempPersonal.city}
+                    placeholder="City"
+                    onChange={(e) => setTempPersonal({ ...tempPersonal, city: e.target.value })}
+                  />
+                  <input
+                    type="text"
+                    className="pf-input"
+                    value={tempPersonal.area}
+                    placeholder="Area"
+                    onChange={(e) => setTempPersonal({ ...tempPersonal, area: e.target.value })}
+                  />
+                </div>
+              ) : (
+                <div className="pf-value"><MapPin size={15} /> {user.city} – {user.area}</div>
+              )}
             </div>
           </div>
         </div>
@@ -110,30 +328,79 @@ const Profile = () => {
         <div className="prof-section-card">
           <div className="prof-section-header">
             <h3>Work Information</h3>
-            <button className="prof-edit-btn">Edit</button>
+            {isEditingWork ? (
+              <div className="edit-actions">
+                <button className="prof-save-btn" onClick={handleSaveWork}><Save size={14} /> Save</button>
+                <button className="prof-cancel-btn" onClick={handleCancelWork}><X size={14} /> Cancel</button>
+              </div>
+            ) : (
+              <button className="prof-edit-btn" onClick={handleEditWork}>Edit</button>
+            )}
           </div>
           <div className="prof-fields-grid">
             <div className="prof-field">
               <div className="pf-label">Delivery Platform</div>
-              <div className="pf-value select-style">
-                <Briefcase size={15} /> Zomato
-                <span className="select-arrow">▾</span>
-              </div>
+              {isEditingWork ? (
+                <select
+                  className="pf-input"
+                  value={tempWork.platform}
+                  onChange={(e) => setTempWork({ ...tempWork, platform: e.target.value })}
+                >
+                  <option value="Zomato">Zomato</option>
+                  <option value="Swiggy">Swiggy</option>
+                  <option value="Zepto">Zepto</option>
+                  <option value="Blinkit">Blinkit</option>
+                </select>
+              ) : (
+                <div className="pf-value"><Briefcase size={15} /> {user.platform}</div>
+              )}
             </div>
             <div className="prof-field">
               <div className="pf-label">Partner ID</div>
-              <div className="pf-value"><Settings size={15} /> ZOM-2025-MB-45821</div>
+              {isEditingWork ? (
+                <input
+                  type="text"
+                  className="pf-input"
+                  value={tempWork.partnerId}
+                  onChange={(e) => setTempWork({ ...tempWork, partnerId: e.target.value })}
+                />
+              ) : (
+                <div className="pf-value"><Settings size={15} /> {user.partnerId}</div>
+              )}
             </div>
             <div className="prof-field">
               <div className="pf-label">Average Working Hours</div>
-              <div className="pf-value"><Clock size={15} /> 8–10 hours/day</div>
+              {isEditingWork ? (
+                <input
+                  type="text"
+                  className="pf-input"
+                  value={tempWork.workingHours}
+                  onChange={(e) => setTempWork({ ...tempWork, workingHours: e.target.value })}
+                />
+              ) : (
+                <div className="pf-value"><Clock size={15} /> {user.workingHours}</div>
+              )}
             </div>
             <div className="prof-field">
-              <div className="pf-label">Primary Zone</div>
-              <div className="pf-value">
-                <MapPin size={15} />
-                <span>Andheri East, <span className="zone-highlight">Kurla</span>, <span className="zone-highlight">Bandra</span></span>
-              </div>
+              <div className="pf-label">Primary Zone (comma separated)</div>
+              {isEditingWork ? (
+                <input
+                  type="text"
+                  className="pf-input"
+                  value={tempWork.primaryZones}
+                  onChange={(e) => setTempWork({ ...tempWork, primaryZones: e.target.value })}
+                />
+              ) : (
+                <div className="pf-value">
+                  <MapPin size={15} />
+                  <span>{user.primaryZones.map((z, i) => (
+                    <React.Fragment key={i}>
+                      {i > 0 && ', '}
+                      <span className="zone-highlight">{z}</span>
+                    </React.Fragment>
+                  ))}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -141,7 +408,7 @@ const Profile = () => {
         {/* Security Settings */}
         <div className="prof-section-card">
           <h3 className="prof-standalone-title">Security Settings</h3>
-          <div className="security-item highlighted">
+          <div className={`security-item highlighted ${isChangingPassword ? 'expanded' : ''}`}>
             <div className="si-left">
               <Lock size={18} className="si-icon" />
               <div>
@@ -149,7 +416,48 @@ const Profile = () => {
                 <div className="si-sub">Last changed 45 days ago</div>
               </div>
             </div>
-            <button className="prof-edit-btn">Update</button>
+            {!isChangingPassword ? (
+              <button className="prof-edit-btn" onClick={() => setIsChangingPassword(true)}>Update</button>
+            ) : (
+              <button className="prof-cancel-btn" onClick={() => setIsChangingPassword(false)}>Cancel</button>
+            )}
+
+            {isChangingPassword && (
+              <div className="password-form-overlay">
+                <div className="prof-fields-grid" style={{ marginTop: 20 }}>
+                  <div className="prof-field full-width">
+                    <div className="pf-label">Current Password</div>
+                    <input 
+                      type="password" 
+                      className="pf-input" 
+                      value={passwordForm.current}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })}
+                    />
+                  </div>
+                  <div className="prof-field">
+                    <div className="pf-label">New Password</div>
+                    <input 
+                      type="password" 
+                      className="pf-input" 
+                      value={passwordForm.new}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
+                    />
+                  </div>
+                  <div className="prof-field">
+                    <div className="pf-label">Confirm New Password</div>
+                    <input 
+                      type="password" 
+                      className="pf-input" 
+                      value={passwordForm.confirm}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="prof-section-footer" style={{ marginTop: 15 }}>
+                  <button className="prof-save-btn" onClick={handleSavePassword}>Save Password</button>
+                </div>
+              </div>
+            )}
           </div>
           <div className="security-item">
             <div className="si-left">
@@ -211,7 +519,7 @@ const Profile = () => {
         {/* Account Actions */}
         <div className="prof-section-card" style={{ marginBottom: 40 }}>
           <h3 className="prof-standalone-title">Account Actions</h3>
-          <div className="account-action">
+          <div className="account-action" onClick={handleExportData} style={{ cursor: 'pointer' }}>
             <div className="aa-title">Download My Data</div>
             <div className="aa-sub teal-link">Export all your insurance data</div>
           </div>

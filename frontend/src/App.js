@@ -12,24 +12,28 @@ import Claims from './pages/Claims/Claims';
 import Payments from './pages/Payments/Payments';
 import Profile from './pages/Profile/Profile';
 
+import { UserProvider } from './context/UserContext';
+
 function App() {
   return (
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/policy" element={<Policy />} />
-          <Route path="/alerts" element={<Alerts />} />
-          <Route path="/premium" element={<PremiumDetails />} />
-          <Route path="/claims" element={<Claims />} />
-          <Route path="/payments" element={<Payments />} />
-          <Route path="/profile" element={<Profile />} />
-        </Routes>
-      </div>
-    </Router>
+    <UserProvider>
+      <Router>
+        <div className="App">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/policy" element={<Policy />} />
+            <Route path="/alerts" element={<Alerts />} />
+            <Route path="/premium" element={<PremiumDetails />} />
+            <Route path="/claims" element={<Claims />} />
+            <Route path="/payments" element={<Payments />} />
+            <Route path="/profile" element={<Profile />} />
+          </Routes>
+        </div>
+      </Router>
+    </UserProvider>
   );
 }
 
