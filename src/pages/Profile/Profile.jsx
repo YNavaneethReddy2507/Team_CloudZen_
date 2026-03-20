@@ -168,7 +168,6 @@ const Profile = () => {
     ].map(val => `"${val}"`);
 
     // 2. Payments Section
-    const paymentHeaders = ['', '', '', '', '', '', ''];
     const paymentTitle = ['SECTION: PAYMENT TRANSACTIONS', '', '', '', '', '', ''];
     const paymentColumns = ['Date', 'Transaction ID', 'Type', 'Details', 'Method', 'Amount', 'Status'];
     const paymentRows = transactions.map(t => [
@@ -176,7 +175,6 @@ const Profile = () => {
     ].map(val => `"${val}"`));
 
     // 3. Claims Section
-    const claimHeaders = ['', '', '', '', '', '', ''];
     const claimTitle = ['SECTION: CLAIMS HISTORY', '', '', '', '', '', ''];
     const claimColumns = ['Claim ID', 'Type', 'Date', 'Amount (INR)', 'Status', 'Duration', 'Trigger Time'];
     const claimRows = claimsData.map(c => [
