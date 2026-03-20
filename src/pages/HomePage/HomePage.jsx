@@ -323,7 +323,7 @@ const HomePage = () => {
         </div>
         
         <div className="footer-bottom">
-          <p>© 2026 DeliveryShield. All rights reserved. Built with AI-powered risk assessment technology.</p>
+          <p>@ Coptright 2026 by Team CloudZen.All Rights Reserves.</p>
         </div>
       </footer>
     </div>

@@ -1,6 +1,7 @@
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
+  width: 100%;
   background-color: #f8fafc;
   font-family: 'Inter', -apple-system, sans-serif;
 }
@@ -14,6 +15,12 @@
   flex-direction: column;
   padding: 24px 16px;
   flex-shrink: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 1000;
 }
 
 .sidebar-brand {
@@ -110,10 +117,9 @@
 
 /* Main Content */
 .main-content {
-  flex-grow: 1;
+  flex: 1;
   padding: 32px 40px;
-  overflow-y: auto;
-  max-width: 1200px;
+  margin-left: 260px;
 }
 
 .main-header h1 {
@@ -478,10 +484,10 @@
 
 @media (max-width: 768px) {
   .dashboard-layout { flex-direction: column; }
-  .sidebar { width: 100%; height: auto; flex-direction: row; flex-wrap: wrap; justify-content: space-between; padding: 16px; }
+  .sidebar { width: 100%; height: auto; flex-direction: row; flex-wrap: wrap; justify-content: space-between; padding: 16px; position: static; }
   .sidebar-nav { display: none; } /* Could add hamburger menu here for mobile */
   .logout-btn { margin-top: 0; }
   .user-profile { margin-bottom: 0; padding: 8px; }
   .stats-grid { grid-template-columns: 1fr; }
-  .main-content { padding: 16px; }
+  .main-content { padding: 16px; margin-left: 0; }
 }
