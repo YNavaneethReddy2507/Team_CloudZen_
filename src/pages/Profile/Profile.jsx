@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import {
-  Shield, LayoutDashboard, FileText, AlertTriangle,
-  CreditCard, Bell, User, LogOut, TrendingUp,
+  Camera, Briefcase, Clock, Save, X,
   Mail, Phone, MapPin, Settings, Lock,
-  Camera, Briefcase, Clock, Save, X
+  Bell, User
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import { useUser } from '../../context/UserContext';
 import { transactions, claimsData } from '../../constants/mockData';
@@ -117,7 +115,7 @@ const Profile = () => {
     }
     // Update user password
     updateUser({ password: passwordForm.new });
-    
+
     alert('Password updated successfully! This password will be required for plan changes and deactivation.');
     setIsChangingPassword(false);
     setPasswordForm({ current: '', new: '', confirm: '' });
@@ -128,7 +126,7 @@ const Profile = () => {
       alert('Please enter your password to deactivate');
       return;
     }
-    
+
     if (deactivationPassword !== user.password) {
       alert('Incorrect password. Deactivation cancelled.');
       return;
@@ -158,14 +156,14 @@ const Profile = () => {
     // 1. Profile Section
     const profileHeaders = ['SECTION: PROFILE', '', '', '', '', '', '', '', '', '', '', '', '', ''];
     const profileColumns = [
-      'Full Name', 'Email', 'Phone', 'City', 'Area', 'Platform', 
-      'Partner ID', 'Working Hours', 'Status', 'Risk Score', 
+      'Full Name', 'Email', 'Phone', 'City', 'Area', 'Platform',
+      'Partner ID', 'Working Hours', 'Status', 'Risk Score',
       'Risk Level', 'Monthly Premium', 'Total Claims', 'Export Date'
     ];
     const profileRow = [
-      user.fullName, user.email, user.phone, user.city, user.area, 
-      user.platform, user.partnerId, user.workingHours, user.status, 
-      user.riskProfile?.score, user.riskProfile?.level, user.riskProfile?.premium, 
+      user.fullName, user.email, user.phone, user.city, user.area,
+      user.platform, user.partnerId, user.workingHours, user.status,
+      user.riskProfile?.score, user.riskProfile?.level, user.riskProfile?.premium,
       user.totalClaims, new Date().toISOString()
     ].map(val => `"${val}"`);
 
@@ -194,7 +192,7 @@ const Profile = () => {
     if (factors) {
       if (Array.isArray(factors)) {
         riskRows = factors.map(r => [
-          r.name, r.impact || r.score || 'N/A', 
+          r.name, r.impact || r.score || 'N/A',
           r.name === 'Weather' ? 'Based on real-time Met Dept data' : r.name === 'Pollution' ? 'Based on live AQI data' : 'Based on local safety trends'
         ].map(val => `"${val}"`));
       } else if (typeof factors === 'object') {
@@ -213,7 +211,7 @@ const Profile = () => {
       user.status,
       `₹${user.riskProfile?.premium}`,
       'March 21, 2026', // Matching Payments.jsx
-      user.paymentMethods?.[0] ? `${user.paymentMethods[0].type} (${user.paymentMethods[0].details})` : 'None' 
+      user.paymentMethods?.[0] ? `${user.paymentMethods[0].type} (${user.paymentMethods[0].details})` : 'None'
     ].map(val => `"${val}"`);
 
     // Combine all
@@ -269,15 +267,15 @@ const Profile = () => {
             ) : (
               <div className="profile-avatar-lg">{user.fullName.split(' ').map(n => n[0]).join('')}</div>
             )}
-            <input 
-              type="file" 
-              id="avatarInput" 
-              hidden 
-              accept="image/*" 
-              onChange={handleAvatarChange} 
+            <input
+              type="file"
+              id="avatarInput"
+              hidden
+              accept="image/*"
+              onChange={handleAvatarChange}
             />
-            <button 
-              className="avatar-camera-btn" 
+            <button
+              className="avatar-camera-btn"
               onClick={() => document.getElementById('avatarInput').click()}
             >
               <Camera size={14} />
@@ -485,27 +483,27 @@ const Profile = () => {
                 <div className="prof-fields-grid" style={{ marginTop: 20 }}>
                   <div className="prof-field full-width">
                     <div className="pf-label">Current Password</div>
-                    <input 
-                      type="password" 
-                      className="pf-input" 
+                    <input
+                      type="password"
+                      className="pf-input"
                       value={passwordForm.current}
                       onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })}
                     />
                   </div>
                   <div className="prof-field">
                     <div className="pf-label">New Password</div>
-                    <input 
-                      type="password" 
-                      className="pf-input" 
+                    <input
+                      type="password"
+                      className="pf-input"
                       value={passwordForm.new}
                       onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
                     />
                   </div>
                   <div className="prof-field">
                     <div className="pf-label">Confirm New Password</div>
-                    <input 
-                      type="password" 
-                      className="pf-input" 
+                    <input
+                      type="password"
+                      className="pf-input"
                       value={passwordForm.confirm}
                       onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
                     />
@@ -602,9 +600,9 @@ const Profile = () => {
               <div className="deactivate-form-overlay" onClick={(e) => e.stopPropagation()}>
                 <div className="prof-field full-width" style={{ marginTop: 20 }}>
                   <div className="pf-label">Enter Password to Confirm</div>
-                  <input 
-                    type="password" 
-                    className="pf-input" 
+                  <input
+                    type="password"
+                    className="pf-input"
                     placeholder="Enter your current password"
                     value={deactivationPassword}
                     onChange={(e) => setDeactivationPassword(e.target.value)}
