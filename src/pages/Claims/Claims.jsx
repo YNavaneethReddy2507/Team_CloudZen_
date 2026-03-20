@@ -7,7 +7,6 @@ import {
 import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import { useUser } from '../../context/UserContext';
-import { claimsData } from '../../constants/mockData';
 import './Claims.css';
 
 
@@ -22,30 +21,31 @@ const StatusBadge = ({ status }) => {
   return <span className={`claim-status-badge ${cls}`}>{status}</span>;
 };
 
-const Claims = () => {
-  const { user, simulateClaim } = useUser();
+const handleDownloadCSV = (data) => {
+  const headers = ['Claim ID', 'Type', 'Date', 'Amount (INR)', 'Status', 'Duration', 'Trigger Time'];
+  const rows = (data || []).map(c => [
+    c.id,
+    c.type,
+    c.date,
+    c.amount,
+    c.status,
+    c.duration,
+    c.triggerTime
+  ]);
+  
+  const csvContent = [headers, ...rows].map(e => e.join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', 'CloudZen_Claims_History.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
-  const handleDownloadCSV = () => {
-    const headers = ['Claim ID', 'Type', 'Date', 'Amount (INR)', 'Status', 'Duration', 'Trigger Time'];
-    const rows = (user.claims || []).map(c => [
-      c.id, c.type, c.date, c.amount, c.status, c.duration, c.triggerTime
-    ]);
-    
-    // Properly handle commas by wrapping in quotes
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(val => `"${val}"`).join(','))
-      .join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'CloudZen_Claims_History.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
+const Claims = () => {
+  const { user } = useUser();
 
   return (
     <div className="dashboard-layout">
@@ -53,14 +53,9 @@ const Claims = () => {
 
       {/* Main Content */}
       <main className="main-content">
-        <header className="main-header flex-header">
-          <div>
-            <h1>Claims History</h1>
-            <p>Track your <span className="claims-highlight">automatic claim triggers</span> and payouts</p>
-          </div>
-          <button className="simulate-btn" onClick={simulateClaim}>
-            <AlertTriangle size={14} /> Simulate Disruption
-          </button>
+        <header className="main-header">
+          <h1>Claims History</h1>
+          <p>Track your <span className="claims-highlight">automatic claim triggers</span> and payouts</p>
         </header>
 
         {/* Stats */}
@@ -78,16 +73,16 @@ const Claims = () => {
               <div className="icon-wrapper green"><CheckCircle2 size={20} /></div>
               <span className="period">Approved Claims</span>
             </div>
-            <h2>9</h2>
-            <span className="sub-text">75% approval rate</span>
+            <h2>{user.claimsData?.filter(c => c.status === 'Paid').length || 0}</h2>
+            <span className="sub-text">Based on your activity</span>
           </div>
           <div className="stat-card">
             <div className="stat-header">
               <div className="icon-wrapper teal"><TrendingUp size={20} /></div>
               <span className="period">Total Payout</span>
             </div>
-            <h2>₹4,050</h2>
-            <span className="trend green">↗ +₹900 this week</span>
+            <h2>₹{user.claimsData?.reduce((acc, c) => acc + (c.status === 'Paid' ? c.amount : 0), 0).toLocaleString() || 0}</h2>
+            <span className="trend green">↗ Total earnings</span>
           </div>
           <div className="stat-card">
             <div className="stat-header">
@@ -123,13 +118,13 @@ const Claims = () => {
         {/* All Claims */}
         <div className="section-header-flex">
           <h3 className="section-heading">All Claims</h3>
-          <button className="download-csv-btn-claims" onClick={handleDownloadCSV}>
+          <button className="download-csv-btn-claims" onClick={() => handleDownloadCSV(user.claimsData)}>
             <FileText size={14} /> Download CSV
           </button>
         </div>
         <div className="claims-list-container">
-          {(user.claims || []).length > 0 ? (
-            (user.claims || []).map((claim, i) => (
+          {user.claimsData?.length > 0 ? (
+            user.claimsData.map((claim, i) => (
               <div key={i} className="claim-row">
                 <div className="claim-row-top">
                   <div className="claim-row-left">
@@ -142,7 +137,7 @@ const Claims = () => {
                     </div>
                   </div>
                   <div className="claim-row-right">
-                    <div className="claim-amount-text">₹{(claim.amount || 0).toLocaleString()}</div>
+                    <div className="claim-amount-text">₹{claim.amount.toLocaleString()}</div>
                     <StatusBadge status={claim.status} />
                   </div>
                 </div>
@@ -172,10 +167,10 @@ const Claims = () => {
               </div>
             ))
           ) : (
-            <div className="empty-claims-state">
-              <Shield size={40} className="empty-icon" />
-              <h4>No claims triggered yet</h4>
-              <p>Your automatic shield is active. Relax and focus on deliveries!</p>
+            <div className="empty-state-card">
+              <AlertTriangle size={48} className="empty-icon" />
+              <h4>No claims found</h4>
+              <p>When weather disruptions are detected, your automatic claims will appear here.</p>
             </div>
           )}
         </div>
@@ -190,7 +185,7 @@ const Claims = () => {
             <ul>
               <li>Rainfall ≥ 50mm per hour</li>
               <li>Minimum 3 hours duration</li>
-              <li>Coverage: ₹150/hour</li>
+              <li>Coverage: ₹{user.riskProfile?.payout || '150'}/hour</li>
             </ul>
           </div>
           <div className="eligibility-card">
@@ -200,7 +195,7 @@ const Claims = () => {
             <ul>
               <li>AQI ≥ 300 (Hazardous)</li>
               <li>Minimum 3 hours duration</li>
-              <li>Coverage: ₹100/hour</li>
+              <li>Coverage: ₹{Math.round((user.riskProfile?.payout || 150) * 0.66)}/hour</li>
             </ul>
           </div>
           <div className="eligibility-card">
@@ -210,7 +205,7 @@ const Claims = () => {
             <ul>
               <li>Major road closure</li>
               <li>Minimum 4 hours duration</li>
-              <li>Coverage: ₹120/hour</li>
+              <li>Coverage: ₹{Math.round((user.riskProfile?.payout || 150) * 0.8)}/hour</li>
             </ul>
           </div>
           <div className="eligibility-card">
@@ -220,7 +215,7 @@ const Claims = () => {
             <ul>
               <li>Government-imposed restrictions</li>
               <li>Full day coverage</li>
-              <li>Coverage: ₹200/hour</li>
+              <li>Coverage: ₹{Math.round((user.riskProfile?.payout || 150) * 1.33)}/hour</li>
             </ul>
           </div>
         </div>

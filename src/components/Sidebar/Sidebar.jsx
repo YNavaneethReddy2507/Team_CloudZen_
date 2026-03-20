@@ -5,10 +5,11 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
+import Logo from '../Logo/Logo';
 import './Sidebar.css';
 
 const Sidebar = ({ activePage }) => {
-  const { user, logoutUser } = useUser();
+  const { user } = useUser();
 
   const navItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/dashboard', id: 'dashboard' },
@@ -23,19 +24,17 @@ const Sidebar = ({ activePage }) => {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <img src="/logo.png" alt="ShieldPath" className="sidebar-logo-img" />
+        <Logo size={28} />
         <span>ShieldPath</span>
       </div>
 
       <div className="user-profile">
-        <div className="avatar-container">
-          <div className="avatar">
-            {user.profileImage ? (
-              <img src={user.profileImage} alt="Profile" className="avatar-img" />
-            ) : (
-              (user.fullName || 'User').split(' ').map(n => n[0]).join('')
-            )}
-          </div>
+        <div className="avatar">
+           {user.avatar ? (
+             <img src={user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+           ) : (
+             user.fullName.split(' ').map(n => n[0]).join('')
+           )}
         </div>
         <div className="user-info">
           <span className="user-name">{user.fullName}</span>
@@ -56,11 +55,7 @@ const Sidebar = ({ activePage }) => {
         ))}
       </nav>
 
-      <Link 
-        to="/login" 
-        className="logout-btn"
-        onClick={() => logoutUser()}
-      >
+      <Link to="/login" className="logout-btn">
         <LogOut size={20} />
         <span>Logout</span>
       </Link>

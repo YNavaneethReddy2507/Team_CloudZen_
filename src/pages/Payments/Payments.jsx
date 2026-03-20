@@ -1,16 +1,17 @@
 import React from 'react';
 import { 
-  CreditCard, Smartphone, ArrowDownLeft, ArrowUpRight,
-  Clock, Calendar as CalendarIcon,
+  Shield, LayoutDashboard, FileText, AlertTriangle,
+  CreditCard, Bell, User, LogOut, TrendingUp,
+  CheckCircle2, Clock, Smartphone, ArrowDownLeft, ArrowUpRight, Building2,
+  Calendar as CalendarIcon,
   ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  CheckCircle2
+  ChevronRight
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Tooltip, Legend
 } from 'recharts';
+import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import { transactions } from '../../constants/mockData';
 import { useUser } from '../../context/UserContext';
@@ -25,30 +26,36 @@ const cashflowData = [
   { month: 'Mar', payouts: 1350, premiums: -150 },
 ];
 
+const handleDownloadCSV = () => {
+  const headers = ['Date', 'Transaction ID', 'Type', 'Details', 'Method', 'Amount', 'Status'];
+  const rows = transactions.map(t => [
+    t.date,
+    t.txn,
+    t.type,
+    t.details,
+    t.method,
+    t.amount.replace('₹', ''),
+    'Completed'
+  ]);
+  
+  // Properly handle commas by wrapping in quotes
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(val => `"${val}"`).join(','))
+    .join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'CloudZen_Transactions.csv';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 
 const Payments = () => {
   const { user, updateUser } = useUser();
-  
-  const handleDownloadCSV = () => {
-    const headers = ['Date', 'Transaction ID', 'Type', 'Details', 'Method', 'Amount', 'Status'];
-    const rows = (user.transactions || []).map(t => [
-      t.date, t.txn, t.type, t.details, t.method, t.amount.replace('₹', ''), 'Completed'
-    ]);
-    
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(val => `"${val}"`).join(','))
-      .join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'CloudZen_Transactions.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
   const methods = user.paymentMethods || [];
 
   const [isAdding, setIsAdding] = React.useState(false);
@@ -62,9 +69,24 @@ const Payments = () => {
   });
 
   const handleDeleteMethod = (id) => {
+    if (methods.length <= 1) {
+      alert('You must have at least one payment method for insurance premiums.');
+      return;
+    }
+
     if (window.confirm('Are you sure you want to remove this payment method?')) {
+      const deletedMethod = methods.find(m => m.id === id);
       const updatedMethods = methods.filter(m => m.id !== id);
+      
+      // If we deleted the primary method, set the next available one as primary
+      if (deletedMethod?.isPrimary && updatedMethods.length > 0) {
+        updatedMethods[0].isPrimary = true;
+      }
+      
       updateUser({ paymentMethods: updatedMethods });
+      if (editingId === id) {
+        setEditingId(null);
+      }
     }
   };
 
@@ -90,6 +112,11 @@ const Payments = () => {
     });
     setEditingId(m.id);
     setIsAdding(false);
+  };
+
+  const getDisplayName = (type) => {
+    const maps = { 'Card': 'Credit Card', 'Debit': 'Debit Card', 'Bank': 'Net Banking', 'UPI': 'UPI Handle' };
+    return maps[type] || type;
   };
 
   const formatDetails = (m) => {
@@ -450,14 +477,12 @@ const Payments = () => {
                       >
                         Edit
                       </button>
-                      {!m.isPrimary && (
-                        <button 
-                          className="remove-btn" 
-                          onClick={(e) => { e.stopPropagation(); handleDeleteMethod(m.id); }}
-                        >
-                          Remove
-                        </button>
-                      )}
+                      <button 
+                        className="remove-btn" 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteMethod(m.id); }}
+                      >
+                        Remove
+                      </button>
                     </div>
                   </div>
                 )
@@ -573,35 +598,41 @@ const Payments = () => {
                 </tr>
               </thead>
               <tbody>
-                {(user.transactions || []).map((t, i) => (
-                  <tr key={i}>
-                    <td>
-                      <div className="txn-date">{t.date}</div>
-                      <div className="txn-id">{t.txn}</div>
-                    </td>
-                    <td>
-                      <span className={`txn-type ${t.isCredit ? 'credit' : 'debit'}`}>
-                        {t.isCredit
-                          ? <ArrowDownLeft size={13} />
-                          : <ArrowUpRight size={13} />}
-                        {t.type}
-                      </span>
-                    </td>
-                    <td className="txn-details">{t.details}</td>
-                    <td>
-                      <span className="txn-method">
-                        {t.method === 'UPI' ? <Smartphone size={13} /> : <CreditCard size={13} />}
-                        {t.method}
-                      </span>
-                    </td>
-                    <td className={`txn-amount ${t.isCredit ? 'credit' : 'debit'}`}>{t.amount}</td>
-                    <td>
-                      <span className="txn-status completed">
-                        <CheckCircle2 size={12} /> Completed
-                      </span>
-                    </td>
+                {user.transactions?.length > 0 ? (
+                  user.transactions.map((t, i) => (
+                    <tr key={i}>
+                      <td>
+                        <div className="txn-date">{t.date}</div>
+                        <div className="txn-id">{t.txn}</div>
+                      </td>
+                      <td>
+                        <span className={`txn-type ${t.isCredit ? 'credit' : 'debit'}`}>
+                          {t.isCredit
+                            ? <ArrowDownLeft size={13} />
+                            : <ArrowUpRight size={13} />}
+                          {t.type}
+                        </span>
+                      </td>
+                      <td className="txn-details">{t.details}</td>
+                      <td>
+                        <span className="txn-method">
+                          {t.method === 'UPI' ? <Smartphone size={13} /> : <CreditCard size={13} />}
+                          {t.method}
+                        </span>
+                      </td>
+                      <td className={`txn-amount ${t.isCredit ? 'credit' : 'debit'}`}>{t.amount}</td>
+                      <td>
+                        <span className="txn-status completed">
+                          <CheckCircle2 size={12} /> Completed
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="empty-table-msg">No transactions found for your account yet.</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

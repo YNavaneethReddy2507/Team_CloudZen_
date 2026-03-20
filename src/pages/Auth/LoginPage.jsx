@@ -1,35 +1,123 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Phone } from 'lucide-react';
+import { Shield, Mail, Lock, Phone } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import Toast from '../../components/Toast/Toast';
 import { useUser } from '../../context/UserContext';
+import { APP_USER } from '../../constants/userConfig';
+import { transactions, claimsData } from '../../constants/mockData';
+import Logo from '../../components/Logo/Logo';
 import './Auth.css';
 
 const LoginPage = () => {
-  const [loginMethod, setLoginMethod] = useState('email'); 
+  const { updateUser } = useUser();
+  const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
   const navigate = useNavigate();
-  const { loginUser } = useUser();
-  
-  const [formData, setFormData] = useState({
-    identifier: '',
-    password: ''
-  });
-  const [error, setError] = useState('');
 
   const handleLogin = (e) => {
     e.preventDefault();
-    const res = loginUser(formData.identifier, formData.password);
-    if (res.success) {
-      navigate('/dashboard');
+    setLoading(true);
+
+    const email = e.target.querySelector('input[type="email"]')?.value || 'Phone Login';
+    const password = e.target.querySelector('input[type="password"]')?.value;
+
+    setTimeout(() => {
+      // Check for Demo Credentials
+      if (email === 'CloudZen@gmail.com' && password === 'CloudZen123') {
+        handleDemoLogin();
+        return;
+      }
+
+      // Check for Registered Users in LocalStorage
+      const savedData = localStorage.getItem('delivery_shield_user');
+      const existingUser = savedData ? JSON.parse(savedData) : null;
+
+      if (existingUser && existingUser.email === email && existingUser.password === password) {
+        // Successful login for registered user
+        setToast({ 
+          message: 'Login successful! Welcome back.', 
+          type: 'success' 
+        });
+        updateUser(existingUser);
+        
+        setTimeout(() => {
+          navigate('/dashboard', { state: { loginSuccess: true } });
+        }, 1500);
+      } else {
+        setLoading(false);
+        setToast({ 
+          message: 'Invalid credentials. Please try again or use Demo Login.', 
+          type: 'error' 
+        });
+      }
+    }, 1000);
+  };
+
+  const handleDemoLogin = () => {
+    setLoading(true);
+    setToast({ 
+      message: 'Logging in as Demo User...', 
+      type: 'success' 
+    });
+    
+    // Check if we already have a saved demo user to preserve changes
+    const savedData = localStorage.getItem('delivery_shield_user');
+    const existingUser = savedData ? JSON.parse(savedData) : null;
+    
+    if (existingUser && existingUser.email === 'CloudZen@gmail.com') {
+      // Just use the existing data to preserve persistence
+      // (Optionally sync fields if APP_USER changed since last login)
+      updateUser({
+        ...existingUser,
+        role: APP_USER.role, // Force role consistency
+        memberSince: APP_USER.memberSince // Force date consistency
+      });
     } else {
-      setError(res.message);
+      // First time demo login or different user was logged in, initialize with full mock set
+      updateUser({
+        ...APP_USER,
+        transactions: transactions,
+        claimsData: claimsData,
+        recentClaims: [
+          { title: 'Heavy Rain', date: 'Mar 12', amount: 900, status: 'Paid', description: '6 hours disruption' },
+          { title: 'Pollution Alert', date: 'Mar 10', amount: 450, status: 'Processing', description: '4 hours disruption' },
+          { title: 'Traffic Disruption', date: 'Mar 8', amount: 0, status: 'Not eligible', description: 'No claim triggered' }
+        ],
+        earningsData: [
+          { name: 'Mon', protected: 2400, actual: 2400 },
+          { name: 'Tue', protected: 2400, actual: 2200 },
+          { name: 'Wed', protected: 2400, actual: 2700 },
+          { name: 'Thu', protected: 2400, actual: 2500 },
+          { name: 'Fri', protected: 2400, actual: 2600 },
+          { name: 'Sat', protected: 3200, actual: 3000 },
+          { name: 'Sun', protected: 3200, actual: 2900 },
+        ],
+        paymentMethods: [
+          { id: 1, type: 'UPI', name: 'UPI Handle', details: 'cloudzen@okaxis', isPrimary: true, icon: 'upi', expiry: '', cvv: '', startDate: '' },
+          { id: 2, type: 'Card', name: 'Credit Card', details: '124563254896', isPrimary: false, icon: 'card', expiry: '2028-01-09', cvv: '123', startDate: '2022-01-01' },
+        ]
+      });
     }
+
+    setTimeout(() => {
+      navigate('/dashboard');
+    }, 1500);
   };
 
   return (
     <div className="auth-container">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       <div className="auth-header">
         <div className="auth-brand">
-          <img src="/logo.png" alt="ShieldPath Logo" className="auth-logo-main" />
+          <Logo size={40} />
           <span>ShieldPath</span>
         </div>
         <p className="auth-subtitle">Welcome back! Login to your account</p>
@@ -39,34 +127,29 @@ const LoginPage = () => {
         <h2 className="auth-title">Login</h2>
 
         <div className="auth-method-toggle">
-          <button 
+          <button
             className={`toggle-btn ${loginMethod === 'email' ? 'active' : ''}`}
             onClick={() => setLoginMethod('email')}
+            disabled={loading}
           >
             Email
           </button>
-          <button 
+          <button
             className={`toggle-btn ${loginMethod === 'phone' ? 'active' : ''}`}
             onClick={() => setLoginMethod('phone')}
+            disabled={loading}
           >
             Phone
           </button>
         </div>
 
         <form className="auth-form" onSubmit={handleLogin}>
-          {error && <div className="error-banner" style={{ color: '#ef4444', marginBottom: 15, fontSize: 14 }}>{error}</div>}
           {loginMethod === 'email' ? (
             <div className="form-group">
               <label>Email Address</label>
               <div className="input-wrapper">
                 <Mail size={18} className="input-icon" />
-                <input 
-                  type="email" 
-                  placeholder="your@email.com" 
-                  value={formData.identifier}
-                  onChange={(e) => setFormData({...formData, identifier: e.target.value})}
-                  required
-                />
+                <input type="email" placeholder="your@email.com" required disabled={loading} />
               </div>
             </div>
           ) : (
@@ -74,13 +157,7 @@ const LoginPage = () => {
               <label>Phone Number</label>
               <div className="input-wrapper">
                 <Phone size={18} className="input-icon" />
-                <input 
-                  type="tel" 
-                  placeholder="+91 98765 43210" 
-                  value={formData.identifier}
-                  onChange={(e) => setFormData({...formData, identifier: e.target.value})}
-                  required
-                />
+                <input type="tel" placeholder="+91 98765 43210" required disabled={loading} />
               </div>
             </div>
           )}
@@ -89,64 +166,46 @@ const LoginPage = () => {
             <label>Password</label>
             <div className="input-wrapper">
               <Lock size={18} className="input-icon" />
-              <input 
-                type="password" 
-                placeholder="Enter your password" 
-                value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
-                required
-              />
+              <input type="password" placeholder="Enter your password" required disabled={loading} />
             </div>
           </div>
 
           <div className="form-options">
             <label className="checkbox-label">
-              <input type="checkbox" />
+              <input type="checkbox" disabled={loading} />
               <span className="checkmark"></span>
               Remember me
             </label>
             <a href="/" className="forgot-password">Forgot password?</a>
           </div>
 
-          <button type="submit" className="auth-submit-btn">Login</button>
+          <button
+            type="submit"
+            className={`auth-submit-btn ${loading ? 'loading' : ''}`}
+            disabled={loading}
+          >
+            {loading ? 'Processing...' : 'Login'}
+          </button>
 
-          <div className="divider">
-            <span>Or continue with</span>
+          <div className="demo-hint-box">
+            <p><strong>Reviewer Demo Account:</strong></p>
+            <p>Email: <code>CloudZen@gmail.com</code></p>
+            <p>Password: <code>CloudZen123</code></p>
+            <button
+              type="button"
+              className="demo-quick-login"
+              onClick={handleDemoLogin}
+              disabled={loading}
+            >
+              Quick Login as Demo User
+            </button>
           </div>
 
-          <button type="button" className="google-btn">
-            <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            Login with Google
-          </button>
         </form>
 
         <p className="auth-redirect">
           Don't have an account? <Link to="/register">Register now</Link>
         </p>
-
-        <div className="demo-account-section">
-          <div className="demo-divider">
-            <span>Demo Access</span>
-          </div>
-          <button 
-            type="button" 
-            className="demo-login-btn"
-            onClick={() => {
-              loginUser('rahul.kumar@email.com', '123456');
-              setTimeout(() => navigate('/dashboard'), 100);
-            }}
-          >
-            <div className="demo-btn-content">
-              <span className="demo-name">Login as Rahul Kumar (Demo)</span>
-              <span className="demo-creds">rahul.kumar@email.com • 123456</span>
-            </div>
-          </button>
-        </div>
       </div>
     </div>
   );

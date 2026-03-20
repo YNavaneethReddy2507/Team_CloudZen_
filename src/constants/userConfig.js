@@ -1,15 +1,15 @@
 export const APP_USER = {
   // Identity
-  firstName: 'Rahul',
-  lastName: 'Kumar',
-  fullName: 'Rahul Kumar',
+  firstName: 'Cloud',
+  lastName: 'Zen',
+  fullName: 'CloudZen',
   role: 'Zomato Partner',
-  memberSince: 'October 2025',
-  avatarInitials: 'RK',
+  memberSince: 'March 2026',
+  avatarInitials: 'CZ',
 
   // Contact
-  email: 'rahul.kumar@email.com',
-  phone: '+91 98765 43210',
+  email: 'CloudZen@gmail.com',
+  phone: '+91 99999 88888',
   city: 'Mumbai',
   area: 'Andheri East',
 
@@ -22,9 +22,4 @@ export const APP_USER = {
   // Coverage
   status: 'Active',
   totalClaims: 12,
-
-  // Vehicle Credentials
-  vehicleType: 'Two-Wheeler',
-  vehicleNumber: 'MH-01-BK-4512',
-  licenseNumber: 'DL-2025-IND-8845',
 };

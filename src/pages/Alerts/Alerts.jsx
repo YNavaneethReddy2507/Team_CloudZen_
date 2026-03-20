@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Shield, LayoutDashboard, FileText, PieChart, AlertTriangle,
+  Shield, LayoutDashboard, FileText, AlertTriangle,
   CreditCard, Bell, User, LogOut, TrendingUp, CloudRain, Wind,
   MapPin, CheckCircle2, Sun, Cloud
 } from 'lucide-react';
@@ -78,7 +78,7 @@ const Alerts = () => {
             </div>
           )}
 
-          {user.riskProfile?.riskFactors.pollution > 40 && (
+          {user.riskProfile?.riskFactors?.pollution > 40 && (
             <div className="alert-card warning">
               <div className="alert-icon-wrapper">
                 <Wind size={24} />
@@ -86,17 +86,17 @@ const Alerts = () => {
               <div className="alert-content">
                 <div className="alert-header-row">
                   <h4>Pollution Alert</h4>
-                  <span className={`probability-badge ${user.riskProfile.riskFactors.pollution > 70 ? 'high' : 'medium'}`}>
-                    {user.riskProfile.riskFactors.pollution}% Probability
+                  <span className={`probability-badge ${user.riskProfile.riskFactors?.pollution > 70 ? 'high' : 'medium'}`}>
+                    {user.riskProfile.riskFactors?.pollution || 0}% Probability
                   </span>
                 </div>
                 <div className="alert-meta">
                   <span><MapPin size={14} /> {user.area} & nearby zones</span>
                   <span><AlertTriangle size={14} /> Next 4 hours</span>
                 </div>
-                <p className="alert-description">
-                  AQI expected to reach {Math.round(user.riskProfile.riskFactors.pollution * 4 + 100)}. Monitor for claim eligibility.
-                </p>
+                <div className="alert-description">
+                  AQI expected to reach {Math.round((user.riskProfile.riskFactors?.pollution || 0) * 4 + 100)}. Monitor for claim eligibility.
+                </div>
                 <div className="alert-actions">
                   <button className="btn-view-details dark" onClick={() => { setModalType('pollution'); setShowModal(true); }}>View Details</button>
                   <button className="btn-dismiss">Dismiss Alert</button>
@@ -121,56 +121,37 @@ const Alerts = () => {
                 <div className="temperature">{weatherData.loading ? '--' : weatherData.temp}°C</div>
                 <div className="weather-stats">
                   <div className="stat-row"><span>Rainfall</span><span>{weatherData.loading ? '--' : weatherData.rainfall}mm</span></div>
-                  <div className="stat-row"><span>AQI</span><span>{user.riskProfile?.riskFactors.pollution * 2}</span></div>
+                  <div className="stat-row"><span>AQI</span><span>{(user.riskProfile?.riskFactors?.pollution || 0) * 2}</span></div>
                 </div>
                 <div className={`risk-indicator ${weatherData.rainfall > 5 ? 'high' : 'low'}`}>
                   {weatherData.rainfall > 5 ? 'High Risk' : 'Optimal'}
                 </div>
               </div>
 
-              <div className="day-card">
-                <div className="day-header">Tomorrow</div>
-                <CloudRain size={32} className="weather-icon text-blue" />
-                <div className="weather-desc">Light Rain</div>
-                <div className="temperature">29°C</div>
-                <div className="weather-stats">
-                  <div className="stat-row"><span>Rainfall</span><span>15mm</span></div>
-                  <div className="stat-row"><span>AQI</span><span>165</span></div>
-                </div>
-              </div>
-
-              <div className="day-card">
-                <div className="day-header">Wed</div>
-                <Cloud size={32} className="weather-icon text-yellow" />
-                <div className="weather-desc">Cloudy</div>
-                <div className="temperature">30°C</div>
-                <div className="weather-stats">
-                  <div className="stat-row"><span>Rainfall</span><span>5mm</span></div>
-                  <div className="stat-row"><span>AQI</span><span>180</span></div>
-                </div>
-              </div>
-
-              <div className="day-card">
-                <div className="day-header">Thu</div>
-                <Sun size={32} className="weather-icon text-yellow" />
-                <div className="weather-desc">Partly Cloudy</div>
-                <div className="temperature">31°C</div>
-                <div className="weather-stats">
-                  <div className="stat-row"><span>Rainfall</span><span>0mm</span></div>
-                  <div className="stat-row"><span>AQI</span><span>155</span></div>
-                </div>
-              </div>
-
-              <div className="day-card">
-                <div className="day-header">Fri</div>
-                <Sun size={32} className="weather-icon text-yellow" />
-                <div className="weather-desc">Clear</div>
-                <div className="temperature">32°C</div>
-                <div className="weather-stats">
-                  <div className="stat-row"><span>Rainfall</span><span>0mm</span></div>
-                  <div className="stat-row"><span>AQI</span><span>140</span></div>
-                </div>
-              </div>
+              {/* Dynamic Forecast based on current zone */}
+              {weatherData.loading ? (
+                <div className="day-card loading">Loading forecast...</div>
+              ) : (
+                [1, 2, 3, 4].map((offset) => {
+                  const date = new Date();
+                  date.setDate(date.getDate() + offset);
+                  const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                  const isRainy = (user.riskProfile?.score || 0) > 40 && offset < 2;
+                  
+                  return (
+                    <div key={offset} className="day-card">
+                      <div className="day-header">{offset === 1 ? 'Tomorrow' : dayName}</div>
+                      {isRainy ? <CloudRain size={32} className="weather-icon text-blue" /> : <Sun size={32} className="weather-icon text-yellow" />}
+                      <div className="weather-desc">{isRainy ? 'Possible Rain' : 'Clear'}</div>
+                      <div className="temperature">{Math.round(weatherData.temp + (Math.random() * 4 - 2))}°C</div>
+                      <div className="weather-stats">
+                        <div className="stat-row"><span>Rainfall</span><span>{isRainy ? '12mm' : '0mm'}</span></div>
+                        <div className="stat-row"><span>AQI</span><span>{Math.round((user.riskProfile?.riskFactors?.pollution || 50) * 2 + (Math.random() * 20 - 10))}</span></div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
 
             </div>
           </section>
@@ -217,54 +198,32 @@ const Alerts = () => {
         <section className="alert-history-section">
           <h3 className="section-title">Recent Alert History</h3>
           <div className="history-list">
-
-            <div className="history-item">
-              <div className="h-icon-wrapper green-bg"><CloudRain size={20} className="text-green" /></div>
-              <div className="h-content">
-                <h4>Heavy Rainfall</h4>
-                <p>March 12, 2026 • <MapPin size={12} /> {user.area}</p>
+            {user.claimsData?.length > 0 ? (
+              user.claimsData.slice(0, 5).map((claim, idx) => (
+                <div key={idx} className="history-item">
+                  <div className={`h-icon-wrapper ${claim.status === 'Paid' ? 'green-bg' : 'gray-bg'}`}>
+                    {claim.icon === 'rain' ? <CloudRain size={20} className={claim.status === 'Paid' ? 'text-green' : 'text-gray'} /> : 
+                     claim.icon === 'wind' ? <Wind size={20} className={claim.status === 'Paid' ? 'text-green' : 'text-gray'} /> :
+                     <AlertTriangle size={20} className={claim.status === 'Paid' ? 'text-green' : 'text-gray'} />}
+                  </div>
+                  <div className="h-content">
+                    <h4>{claim.type}</h4>
+                    <p>{claim.date} • <MapPin size={12} /> {user.area}</p>
+                  </div>
+                  <div className="h-status text-right">
+                    <div className={`status-text ${claim.status === 'Paid' ? 'text-green' : 'text-gray'}`}>
+                      {claim.status === 'Paid' ? <><CheckCircle2 size={14} /> Claim Triggered</> : 'No Claim'}
+                    </div>
+                    {claim.amount > 0 && <div className="amount">₹{claim.amount}</div>}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="empty-history-msg">
+                <div className="empty-icon-wrapper"><Bell size={24} /></div>
+                <p>No recent alerts or claim triggers for your account.</p>
               </div>
-              <div className="h-status text-right">
-                <div className="status-text text-green"><CheckCircle2 size={14} /> Claim Triggered</div>
-                <div className="amount">₹900</div>
-              </div>
-            </div>
-
-            <div className="history-item">
-              <div className="h-icon-wrapper green-bg"><Wind size={20} className="text-green" /></div>
-              <div className="h-content">
-                <h4>Pollution Spike</h4>
-                <p>March 10, 2026 • <MapPin size={12} /> Kurla</p>
-              </div>
-              <div className="h-status text-right">
-                <div className="status-text text-green"><CheckCircle2 size={14} /> Claim Triggered</div>
-                <div className="amount">₹450</div>
-              </div>
-            </div>
-
-            <div className="history-item">
-              <div className="h-icon-wrapper gray-bg"><AlertTriangle size={20} className="text-gray" /></div>
-              <div className="h-content">
-                <h4>Traffic Disruption</h4>
-                <p>March 8, 2026 • <MapPin size={12} /> Bandra</p>
-              </div>
-              <div className="h-status text-right">
-                <div className="status-text text-gray">No Claim</div>
-              </div>
-            </div>
-
-            <div className="history-item">
-              <div className="h-icon-wrapper green-bg"><CloudRain size={20} className="text-green" /></div>
-              <div className="h-content">
-                <h4>Weather Warning</h4>
-                <p>March 5, 2026 • <MapPin size={12} /> Andheri East</p>
-              </div>
-              <div className="h-status text-right">
-                <div className="status-text text-green"><CheckCircle2 size={14} /> Claim Triggered</div>
-                <div className="amount">₹450</div>
-              </div>
-            </div>
-
+            )}
           </div>
         </section>
 

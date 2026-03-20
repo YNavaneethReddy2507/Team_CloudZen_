@@ -11,36 +11,22 @@ const riskMapping = {
   'Powai': { level: 'Medium', score: 58, premium: 73, riskFactors: { weather: 62, safety: 72, pollution: 42, traffic: 52 }, coords: { lat: 19.1176, lon: 72.9060 } },
 };
 
-const DB_KEY = 'delivery_shield_users_db';
-const ACTIVE_USER_KEY = 'delivery_shield_user';
-
 export const UserProvider = ({ children }) => {
-  const [usersList, setUsersList] = useState(() => {
-    const saved = localStorage.getItem(DB_KEY);
-    return saved ? JSON.parse(saved) : [];
-  });
-
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem(ACTIVE_USER_KEY);
-    const defaultUser = { 
-      ...APP_USER, 
-      password: '123456',
-      coverageStatus: 'Active',
-      planName: 'Standard Shield',
-      claims: [
-        { id: 'C1', type: 'Heavy Rainfall', icon: 'rain', date: 'March 12, 2026', duration: '6 hours', amount: 900, status: 'Paid', triggerTime: '2:00 PM - 8:00 PM', description: 'Rainfall exceeded 65mm/hour threshold. Automatic claim triggered.', paidOn: 'Paid on March 13, 2026 9:15 AM' }
-      ],
-      policyHistory: [
-        { period: 'Mar 15 - Mar 22, 2026', premium: 75, status: 'Active', claims: 0, totalPayout: 0 },
-        { period: 'Mar 7 - Mar 14, 2026', premium: 75, status: 'Completed', claims: 2, totalPayout: 900 }
-      ],
-      vehicleType: APP_USER.vehicleType || 'Two-Wheeler',
-      vehicleNumber: APP_USER.vehicleNumber || 'MH-01-BK-4512',
-      licenseNumber: APP_USER.licenseNumber || 'DL-2025-IND-8845',
-      paymentMethods: [],
-      transactions: []
-    };
-    return saved ? { ...defaultUser, ...JSON.parse(saved) } : defaultUser;
+    const saved = localStorage.getItem('delivery_shield_user');
+    const userData = saved ? JSON.parse(saved) : { ...APP_USER };
+    
+    // Ensure all users have a data structure and isolation
+    if (!userData.earningsData) userData.earningsData = [];
+    if (!userData.claimsData) userData.claimsData = []; // This will now store the actual claim objects
+    if (!userData.recentClaims) userData.recentClaims = [];
+    if (!userData.transactions) userData.transactions = [];
+    
+    if (!userData.paymentMethods) {
+      userData.paymentMethods = [];
+    }
+    
+    return userData;
   });
 
   const [weatherData, setWeatherData] = useState({
@@ -58,32 +44,67 @@ export const UserProvider = ({ children }) => {
       
       try {
         setWeatherData(prev => ({ ...prev, loading: true }));
-        const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(area + ' ' + city)}&count=1&language=en&format=json`);
+        
+        // Step 1: Geocoding
+        const geoResponse = await fetch(
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(area + ' ' + city)}&count=1&language=en&format=json`
+        );
         const geoData = await geoResponse.json();
         
-        let lat = 19.1176, lon = 72.8633;
+        let lat = 19.1176;
+        let lon = 72.8633;
+
         if (geoData.results && geoData.results.length > 0) {
           lat = geoData.results[0].latitude;
           lon = geoData.results[0].longitude;
         }
 
-        const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,rain,weather_code,relative_humidity_2m,wind_speed_10m&timezone=GMT`);
+        // Step 2: Atmospheric Fetch
+        const weatherResponse = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,rain,weather_code,relative_humidity_2m,wind_speed_10m&timezone=GMT`
+        );
         const wData = await weatherResponse.json();
 
-        const airResponse = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10`);
+        // Step 3: Air Quality Fetch
+        const airResponse = await fetch(
+          `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10`
+        );
         const aData = await airResponse.json();
 
-        const nearbyResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=4&language=en&format=json`);
+        // Step 4: Nearby Zones Fetch (City-wide search)
+        const nearbyResponse = await fetch(
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=12&language=en&format=json`
+        );
         const nearbyData = await nearbyResponse.json();
         
         let zones = [];
-        if (nearbyData.results) {
-          const seenNames = new Set([area.toLowerCase()]);
+        const primaryZones = user.primaryZones || [];
+        const otherZones = primaryZones.filter(z => z.toLowerCase() !== area.toLowerCase());
+
+        if (otherZones.length > 0) {
+          // Use primary zones for relevance
+          zones = otherZones.slice(0, 3).map(zoneName => ({
+            name: zoneName,
+            riskScore: Math.round(30 + Math.random() * 50),
+            activeAlerts: Math.floor(Math.random() * 2)
+          }));
+        } else if (nearbyData.results) {
+          // Fallback to geocoding search if no primary zones
+          const seenNames = new Set();
+          seenNames.add(area.toLowerCase());
+          seenNames.add(city.toLowerCase()); // Avoid showing city as a zone if we're in an area
+          
           zones = nearbyData.results
-            .map(r => ({ ...r, normalizedName: r.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "") }))
+            .map(r => {
+              const normalized = r.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              return { ...r, normalizedName: normalized };
+            })
             .filter(r => {
               const nameLower = r.normalizedName.toLowerCase();
               if (seenNames.has(nameLower)) return false;
+              if (nameLower.includes('hydarab') || nameLower.includes('haidarab')) { // Specific fix for Hyderabad redundancy
+                 if (city.toLowerCase() === 'hyderabad') return false;
+              }
               seenNames.add(nameLower);
               return true;
             })
@@ -116,6 +137,20 @@ export const UserProvider = ({ children }) => {
             nearbyZones: zones,
             loading: false,
           });
+
+          // Step 4: Dynamic Risk Adjustment (Only if not manually set)
+          if (!riskMapping[area] && !user.isManualPlan) {
+            const dynamicRiskScore = Math.min(95, 40 + (wData.current.rain * 5) + (aData.current.us_aqi / 10));
+            updateUser({
+              riskProfile: {
+                level: dynamicRiskScore > 75 ? 'High Risk' : dynamicRiskScore > 45 ? 'Medium' : 'Low Risk',
+                score: Math.round(dynamicRiskScore),
+                premium: dynamicRiskScore > 75 ? 110 : dynamicRiskScore > 45 ? 75 : 55,
+                riskFactors: { weather: Math.round(dynamicRiskScore), safety: 70, pollution: Math.min(100, aData.current.us_aqi / 2.5), traffic: 60 }
+              },
+              currentPremium: dynamicRiskScore > 75 ? 110 : dynamicRiskScore > 45 ? 75 : 55,
+            });
+          }
         }
       } catch (err) {
         console.error('Failed to fetch stats:', err);
@@ -129,130 +164,40 @@ export const UserProvider = ({ children }) => {
   const updateUser = (newData) => {
     setUser(prev => {
       const updated = { ...prev, ...newData };
+
+      // Sync platform and role: e.g. "Zomato" platform -> "Zomato Partner" role
+      if (newData.platform) {
+        updated.role = `${newData.platform} Partner`;
+      } else if (newData.role) {
+        // If role changed but platform didn't, infer platform from role
+        updated.platform = newData.role.split(' ')[0];
+      }
+
+      // Ensure paymentMethods exist
+      if (!updated.paymentMethods) {
+        updated.paymentMethods = [];
+      }
+
+      // Auto-derive firstName if fullName changed
       if (newData.fullName) {
         updated.firstName = newData.fullName.split(' ')[0];
         updated.avatarInitials = newData.fullName.split(' ').map(n => n[0]).join('').toUpperCase();
       }
-      if (newData.platform) {
-        updated.role = `${newData.platform} Partner`;
-        const prefix = newData.platform.toUpperCase().slice(0,3);
-        if (!updated.partnerId || !updated.partnerId.startsWith(prefix)) {
-          updated.partnerId = `${prefix}-2026-CH-${Math.floor(Math.random() * 90000) + 10000}`;
-        }
-      }
+
+      // Auto-derive riskProfile if area changed
       if (newData.area) {
-        const risk = riskMapping[newData.area] || { level: 'Medium', score: 60, premium: 75 };
+        const risk = riskMapping[newData.area] || { level: 'Medium', score: 60, premium: 75, riskFactors: { weather: 65, safety: 75, pollution: 45, traffic: 55 } };
         updated.riskProfile = risk;
+        updated.currentPremium = risk.premium;
       }
-      localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(updated));
+
+      localStorage.setItem('delivery_shield_user', JSON.stringify(updated));
       return updated;
     });
   };
 
-  const registerUser = (userData) => {
-    const exists = usersList.find(u => u.email === userData.email);
-    if (exists) return { success: false, message: 'Account already exists' };
-
-    const newUser = {
-      ...APP_USER,
-      ...userData,
-      profileImage: null,
-      role: `${userData.platform || 'Direct'} Partner`,
-      partnerId: `${(userData.platform || 'DIR').toUpperCase().slice(0,3)}-2026-CH-${Math.floor(Math.random() * 90000) + 10000}`,
-      status: 'Active',
-      coverageStatus: 'Active',
-      planName: 'Standard Shield',
-      totalClaims: 0,
-      memberSince: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-      claims: [],
-      policyHistory: [
-        { period: 'Mar 15 - Mar 22, 2026', premium: 75, status: 'Active', claims: 0, totalPayout: 0 }
-      ],
-      paymentMethods: [],
-      transactions: [],
-      firstName: (userData.fullName || '').split(' ')[0],
-      avatarInitials: (userData.fullName || '').split(' ').map(n => n[0]).join('').toUpperCase()
-    };
-
-    setUser(newUser);
-    localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(newUser));
-    setUsersList(prev => {
-      const newList = [...prev, newUser];
-      localStorage.setItem(DB_KEY, JSON.stringify(newList));
-      return newList;
-    });
-    return { success: true };
-  };
-
-  const loginUser = (idAt, password) => {
-    const match = usersList.find(u => (u.email === idAt || u.phone === idAt) && u.password === password);
-    if (match) {
-      setUser(match);
-      localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(match));
-      return { success: true };
-    }
-    if ((idAt === APP_USER.email || idAt === APP_USER.phone) && password === '123456') {
-      const defaultUser = {
-        ...APP_USER,
-        password: '123456',
-        coverageStatus: 'Active',
-        planName: 'Standard Shield',
-        claims: [
-          { id: 'C1', type: 'Heavy Rainfall', icon: 'rain', date: 'March 12, 2026', duration: '6 hours', amount: 900, status: 'Paid', triggerTime: '2:00 PM - 8:00 PM', description: 'Rainfall exceeded 65mm/hour threshold. Automatic claim triggered.', paidOn: 'Paid on March 13, 2026 9:15 AM' }
-        ],
-        policyHistory: [
-          { period: 'Mar 15 - Mar 22, 2026', premium: 75, status: 'Active', claims: 0, totalPayout: 0 },
-          { period: 'Mar 7 - Mar 14, 2026', premium: 75, status: 'Completed', claims: 2, totalPayout: 900 },
-          { period: 'Feb 28 - Mar 6, 2026', premium: 75, status: 'Completed', claims: 1, totalPayout: 450 }
-        ],
-        paymentMethods: [],
-        transactions: []
-      };
-      setUser(defaultUser);
-      localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(defaultUser));
-      return { success: true };
-    }
-    return { success: false, message: 'Invalid credentials' };
-  };
-
-  const logoutUser = () => {
-    setUser(null);
-    localStorage.removeItem(ACTIVE_USER_KEY);
-  };
-
-  const simulateClaim = () => {
-    const types = [
-      { type: 'Heavy Rainfall', icon: 'rain', amount: 900, duration: '6 hours', description: 'Rainfall exceeded 65mm/hour threshold. Automatic claim triggered.' },
-      { type: 'Pollution Alert', icon: 'wind', amount: 450, duration: '4 hours', description: 'AQI exceeded 350 (hazardous level). Claim under verification.' }
-    ];
-    const random = types[Math.floor(Math.random() * types.length)];
-    const newClaim = {
-      id: `CLM-2026-${Math.floor(Math.random() * 9000) + 1000}`,
-      type: random.type,
-      icon: random.icon,
-      date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-      amount: random.amount,
-      status: 'Paid',
-      duration: random.duration,
-      triggerTime: '2:00 PM - 8:00 PM',
-      description: random.description,
-      paidOn: `Paid on ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} 9:15 AM`
-    };
-
-    const updatedHistory = [...(user.policyHistory || [])];
-    if (updatedHistory.length > 0) {
-      updatedHistory[0] = { ...updatedHistory[0], claims: updatedHistory[0].claims + 1, totalPayout: updatedHistory[0].totalPayout + newClaim.amount };
-    }
-
-    updateUser({ 
-      claims: [newClaim, ...(user.claims || [])],
-      totalClaims: (user.totalClaims || 0) + 1,
-      policyHistory: updatedHistory
-    });
-  };
-
   return (
-    <UserContext.Provider value={{ user, usersList, updateUser, registerUser, loginUser, logoutUser, weatherData, simulateClaim }}>
+    <UserContext.Provider value={{ user, updateUser, weatherData }}>
       {children}
     </UserContext.Provider>
   );

@@ -75,9 +75,7 @@ Our platform is strictly engineered to meet the hackathon's "Income Protection" 
 1.  **Navigate**: `cd frontend`
 2.  **Run**: `npm start`
 3.  **Demo Onboarding**:
-    - Use the **"Login as Rahul Kumar"** button for a pre-loaded "Phase-1" account.
+    - Use the **"Quick Login as Demo User"** button for a pre-loaded "Phase-1" account.
     - Use the **"Simulate Disruption"** tool on the **Claims** page to trigger a demo parametric payout instantly!
 
----
-**Team CloudZen - Building a Resilient Future for India's Backbone**
 ---
