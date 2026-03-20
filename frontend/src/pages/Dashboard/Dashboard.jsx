@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Shield, LayoutDashboard, FileText, PieChart, AlertTriangle,
   CreditCard, Bell, User, LogOut, TrendingUp, CheckCircle2, CloudRain
 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
+import Toast from '../../components/Toast/Toast';
 import { useUser } from '../../context/UserContext';
 import './Dashboard.css';
 
@@ -30,9 +31,28 @@ const claimsData = [
 
 const Dashboard = () => {
   const { user, weatherData } = useUser();
+  const location = useLocation();
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    // Show success toast if we came from OTP verification
+    if (location.state?.loginSuccess) {
+      setToast({ message: 'You have logged into your account.', type: 'success' });
+      
+      // Clear location state to prevent toast on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   return (
     <div className="dashboard-layout">
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
       <Sidebar activePage="dashboard" />
 
       {/* Main Content */}

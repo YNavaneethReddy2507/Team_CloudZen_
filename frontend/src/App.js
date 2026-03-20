@@ -4,6 +4,7 @@ import './App.css';
 import HomePage from './pages/HomePage/HomePage';
 import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
+import VerifyOtpPage from './pages/Auth/VerifyOtpPage';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Policy from './pages/Policy/Policy';
 import Alerts from './pages/Alerts/Alerts';
@@ -23,6 +24,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/verify-otp" element={<VerifyOtpPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/policy" element={<Policy />} />
             <Route path="/alerts" element={<Alerts />} />

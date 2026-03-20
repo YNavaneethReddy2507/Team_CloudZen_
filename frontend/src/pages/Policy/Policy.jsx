@@ -1,13 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Shield, LayoutDashboard, FileText, PieChart, AlertTriangle, 
   CreditCard, Bell, User, LogOut, TrendingUp, CheckCircle2, Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
+import PlanModal from './components/PlanModal';
 import './Policy.css';
 
 const Policy = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const currentPlan = {
+    name: "Standard Shield",
+    price: "₹75",
+    coverage: "₹3,000",
+    payout: "₹150",
+    maxHours: "20 hrs/week",
+    renewalDate: "Mar 21, 2026",
+    benefits: [
+      "All weather events covered",
+      "Pollution alerts up to 500 AQI",
+      "Advanced AI fraud detection",
+      "Priority 24/7 support",
+      "Instant automated payouts"
+    ]
+  };
+
   return (
     <div className="policy-layout dashboard-layout">
       <Sidebar activePage="policy" />
@@ -112,7 +131,7 @@ const Policy = () => {
                 <li><CheckCircle2 size={16} className="text-teal" /> Priority support</li>
                 <li><CheckCircle2 size={16} className="text-teal" /> Instant payouts</li>
               </ul>
-              <button className="btn-current">Current Plan</button>
+              <button className="btn-current" onClick={() => setIsModalOpen(true)}>Current Plan</button>
             </div>
 
             <div className="plan-card">
@@ -205,6 +224,13 @@ const Policy = () => {
         </section>
 
       </main>
+
+      {/* Plan Modal */}
+      <PlanModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        planData={currentPlan}
+      />
     </div>
   );
 };

@@ -51,7 +51,7 @@ const Footer = ({ scrollToSection }) => {
       </div>
       
       <div className="footer-bottom">
-        <p>@ Coptright 2026 by Team CloudZen.All Rights Reserves.</p>
+        <p>@ Copyright 2026 by Team CloudZen.All Rights Reserves.</p>
       </div>
     </footer>
   );
