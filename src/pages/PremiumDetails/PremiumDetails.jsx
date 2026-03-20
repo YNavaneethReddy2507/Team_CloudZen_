@@ -1,12 +1,10 @@
 import React from 'react';
 import {
-  Shield, LayoutDashboard, FileText, AlertTriangle,
-  CreditCard, Bell, User, LogOut, TrendingUp, CloudRain, MapPin
+  Shield, TrendingUp, CloudRain, MapPin
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip
 } from 'recharts';
-import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import { useUser } from '../../context/UserContext';
 import './PremiumDetails.css';
@@ -73,12 +71,12 @@ const PremiumDetails = () => {
 
   const nearbyZones = (weatherData?.nearbyZones || []).map(z => {
     const level = z.riskScore > 75 ? 'High Risk' : z.riskScore > 40 ? 'Medium' : 'Low Risk';
-    const styling = z.riskScore > 75 
+    const styling = z.riskScore > 75
       ? { color: '#fef2f2', border: '#fca5a5', dot: '#ef4444' }
       : z.riskScore > 40
-      ? { color: '#fffbeb', border: '#fde68a', dot: '#f59e0b' }
-      : { color: '#f0fdf4', border: '#86efac', dot: '#22c55e' };
-    
+        ? { color: '#fffbeb', border: '#fde68a', dot: '#f59e0b' }
+        : { color: '#f0fdf4', border: '#86efac', dot: '#22c55e' };
+
     return {
       name: z.name,
       level,
